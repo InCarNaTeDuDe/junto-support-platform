@@ -1,6 +1,6 @@
 # Junto Support Management Dashboard
 
-A lightweight, modern Support Management web application for Junto built with **Svelte 5**, **Vite**, **TypeScript**, and pure **CSS** (no CSS libraries, no React, no SvelteKit).
+A lightweight, modern Support Management web application for Junto rewritten with **React 19**, **Vite**, **TypeScript**, and pure **CSS** (no CSS bloat, clean minimal SaaS design system).
 
 This internal dashboard is designed for Junto's **OWNER** and **SUPPORT** agents to manage customer support cases created through the Junto mobile application's Support Chat.
 

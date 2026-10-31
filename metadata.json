@@ -1,0 +1,6 @@
+{
+  "name": "TicketFlow - Support Ticket Management",
+  "description": "A clean, efficient support ticket management system with pure CSS styling, ticket tracking, filtering, status workflows, and priority management.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

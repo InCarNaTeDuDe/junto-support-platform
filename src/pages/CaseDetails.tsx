@@ -122,7 +122,7 @@ export const CaseDetails: React.FC<CaseDetailsProps> = ({ caseId, onBack }) => {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+    <div className="case-details-page">
       {/* Top Bar with Back Button and Quick Case Actions */}
       <div className="case-header-nav">
         <button type="button" className="btn btn-secondary btn-sm back-btn" onClick={onBack}>

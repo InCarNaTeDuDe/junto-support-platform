@@ -64,15 +64,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectCase, onNavigate }
   }, []);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+    <div className="dashboard-page">
       {/* Summary Cards Grid */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-          gap: 16,
-        }}
-      >
+      <div className="summary-grid">
         <SummaryCard
           title="Total Cases"
           count={summary.total}
@@ -111,19 +105,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectCase, onNavigate }
       </div>
 
       {errorMsg && (
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 12,
-            padding: '12px 16px',
-            backgroundColor: '#fef2f2',
-            border: '1px solid #fecaca',
-            borderRadius: 'var(--radius-md)',
-            color: '#b91c1c',
-            fontSize: '0.85rem',
-          }}
-        >
+        <div className="alert-banner">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <circle cx="12" cy="12" r="10" />
             <line x1="12" y1="8" x2="12" y2="12" />
@@ -137,120 +119,37 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectCase, onNavigate }
       )}
 
       {/* Triage Focus Tabs Card */}
-      <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '14px 20px',
-            backgroundColor: 'var(--bg-surface)',
-            borderBottom: '1px solid var(--border-subtle)',
-            gap: 16,
-            flexWrap: 'wrap',
-          }}
-        >
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+      <div className="dashboard-sections card">
+        <div className="section-tabs-bar">
+          <div className="tabs-list">
             <button
               type="button"
               className={`tab-btn ${activeTab === 'CRITICAL' ? 'active' : ''}`}
               onClick={() => setActiveTab('CRITICAL')}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 8,
-                padding: '8px 14px',
-                fontSize: '0.85rem',
-                fontWeight: activeTab === 'CRITICAL' ? 600 : 500,
-                color: activeTab === 'CRITICAL' ? 'var(--primary)' : 'var(--text-secondary)',
-                backgroundColor: activeTab === 'CRITICAL' ? 'var(--bg-subtle)' : 'transparent',
-                border: `1px solid ${activeTab === 'CRITICAL' ? 'var(--border-subtle)' : 'transparent'}`,
-                borderRadius: 'var(--radius-md)',
-                cursor: 'pointer',
-              }}
             >
-              <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#dc2626' }} />
+              <span className="tab-indicator indicator-red" />
               <span>Critical & High Priority</span>
-              <span
-                style={{
-                  fontSize: '0.72rem',
-                  fontWeight: 600,
-                  padding: '2px 6px',
-                  borderRadius: 'var(--radius-full)',
-                  backgroundColor: '#fee2e2',
-                  color: '#b91c1c',
-                }}
-              >
-                {summary.criticalOrHigh}
-              </span>
+              <span className="tab-badge badge-red">{summary.criticalOrHigh}</span>
             </button>
 
             <button
               type="button"
               className={`tab-btn ${activeTab === 'UNASSIGNED' ? 'active' : ''}`}
               onClick={() => setActiveTab('UNASSIGNED')}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 8,
-                padding: '8px 14px',
-                fontSize: '0.85rem',
-                fontWeight: activeTab === 'UNASSIGNED' ? 600 : 500,
-                color: activeTab === 'UNASSIGNED' ? 'var(--primary)' : 'var(--text-secondary)',
-                backgroundColor: activeTab === 'UNASSIGNED' ? 'var(--bg-subtle)' : 'transparent',
-                border: `1px solid ${activeTab === 'UNASSIGNED' ? 'var(--border-subtle)' : 'transparent'}`,
-                borderRadius: 'var(--radius-md)',
-                cursor: 'pointer',
-              }}
             >
-              <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#d97706' }} />
+              <span className="tab-indicator indicator-amber" />
               <span>Awaiting Assignment</span>
-              <span
-                style={{
-                  fontSize: '0.72rem',
-                  fontWeight: 600,
-                  padding: '2px 6px',
-                  borderRadius: 'var(--radius-full)',
-                  backgroundColor: '#fef3c7',
-                  color: '#92400e',
-                }}
-              >
-                {summary.unassigned}
-              </span>
+              <span className="tab-badge badge-amber">{summary.unassigned}</span>
             </button>
 
             <button
               type="button"
               className={`tab-btn ${activeTab === 'RECENT' ? 'active' : ''}`}
               onClick={() => setActiveTab('RECENT')}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 8,
-                padding: '8px 14px',
-                fontSize: '0.85rem',
-                fontWeight: activeTab === 'RECENT' ? 600 : 500,
-                color: activeTab === 'RECENT' ? 'var(--primary)' : 'var(--text-secondary)',
-                backgroundColor: activeTab === 'RECENT' ? 'var(--bg-subtle)' : 'transparent',
-                border: `1px solid ${activeTab === 'RECENT' ? 'var(--border-subtle)' : 'transparent'}`,
-                borderRadius: 'var(--radius-md)',
-                cursor: 'pointer',
-              }}
             >
-              <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#2563eb' }} />
+              <span className="tab-indicator indicator-blue" />
               <span>Recent Support Cases</span>
-              <span
-                style={{
-                  fontSize: '0.72rem',
-                  fontWeight: 600,
-                  padding: '2px 6px',
-                  borderRadius: 'var(--radius-full)',
-                  backgroundColor: '#e2e8f0',
-                  color: 'var(--text-secondary)',
-                }}
-              >
-                {recentCases.length}
-              </span>
+              <span className="tab-badge">{recentCases.length}</span>
             </button>
           </div>
 
@@ -263,11 +162,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectCase, onNavigate }
           </button>
         </div>
 
-        <div style={{ padding: '18px 20px 24px' }}>
+        <div className="tab-content-area">
           {activeTab === 'CRITICAL' && (
             <>
-              <div style={{ marginBottom: 14 }}>
-                <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+              <div className="section-description">
+                <p>
                   Cases with urgent safety concerns, payment disputes, or critical trip errors requiring prompt resolution.
                 </p>
               </div>
@@ -282,8 +181,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectCase, onNavigate }
 
           {activeTab === 'UNASSIGNED' && (
             <>
-              <div style={{ marginBottom: 14 }}>
-                <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+              <div className="section-description">
+                <p>
                   Unassigned cases from the Junto mobile chat queue. Assign to yourself or an active agent.
                 </p>
               </div>
@@ -298,10 +197,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectCase, onNavigate }
 
           {activeTab === 'RECENT' && (
             <>
-              <div style={{ marginBottom: 14 }}>
-                <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
-                  Latest incoming cases submitted by Junto mobile users.
-                </p>
+              <div className="section-description">
+                <p>Latest incoming cases submitted by Junto mobile users.</p>
               </div>
               <CaseTable
                 cases={recentCases}

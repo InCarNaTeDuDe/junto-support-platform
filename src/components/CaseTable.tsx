@@ -73,75 +73,28 @@ export const CaseTable: React.FC<CaseTableProps> = ({
           ) : (
             cases.map((c) => (
               <tr key={c.id} onClick={() => onSelect(c.id)}>
-                <td style={{ fontFamily: 'var(--font-mono)', fontSize: '0.82rem' }}>
-                  <span style={{ fontWeight: 600, color: 'var(--primary)' }}>
-                    {c.caseNumber}
-                  </span>
+                <td className="case-number-cell">
+                  <span className="case-code">{c.caseNumber}</span>
                 </td>
                 <td>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <div
-                      style={{
-                        width: 28,
-                        height: 28,
-                        borderRadius: '50%',
-                        backgroundColor: '#e0f2fe',
-                        color: '#0369a1',
-                        fontSize: '0.7rem',
-                        fontWeight: 700,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        flexShrink: 0,
-                      }}
-                    >
+                  <div className="customer-cell">
+                    <div className="customer-avatar">
                       {c.customer?.name ? c.customer.name.slice(0, 2).toUpperCase() : 'CU'}
                     </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-                      <span
-                        style={{
-                          fontWeight: 500,
-                          fontSize: '0.85rem',
-                          color: 'var(--text-main)',
-                          whiteSpace: 'nowrap',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                        }}
-                      >
-                        {c.customer?.name || 'Unknown'}
-                      </span>
+                    <div className="customer-info">
+                      <span className="customer-name">{c.customer?.name || 'Unknown'}</span>
                       {c.customer?.phone && (
-                        <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-                          {c.customer.phone}
-                        </span>
+                        <span className="customer-sub">{c.customer.phone}</span>
                       )}
                     </div>
                   </div>
                 </td>
                 <td>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 3, maxWidth: 420 }}>
-                    <span
-                      style={{
-                        fontWeight: 500,
-                        color: 'var(--text-main)',
-                        whiteSpace: 'nowrap',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                      }}
-                    >
-                      {c.subject}
-                    </span>
+                  <div className="subject-cell">
+                    <span className="subject-text">{c.subject}</span>
                     {c.relatedEntity && (
                       <span
-                        style={{
-                          fontSize: '0.7rem',
-                          fontFamily: 'var(--font-mono)',
-                          color: 'var(--text-muted)',
-                          backgroundColor: 'var(--bg-subtle)',
-                          padding: '1px 5px',
-                          borderRadius: 3,
-                          alignSelf: 'flex-start',
-                        }}
+                        className="entity-tag"
                         title={`Related to Junto ${c.relatedEntity.type}`}
                       >
                         {c.relatedEntity.type}: {c.relatedEntity.id}
@@ -150,18 +103,7 @@ export const CaseTable: React.FC<CaseTableProps> = ({
                   </div>
                 </td>
                 <td>
-                  <span
-                    style={{
-                      fontSize: '0.78rem',
-                      color: 'var(--text-secondary)',
-                      backgroundColor: 'var(--bg-subtle)',
-                      padding: '3px 7px',
-                      borderRadius: 'var(--radius-sm)',
-                      fontWeight: 500,
-                    }}
-                  >
-                    {formatCategory(c.category)}
-                  </span>
+                  <span className="category-tag">{formatCategory(c.category)}</span>
                 </td>
                 <td>
                   <PriorityBadge priority={c.priority} />
@@ -171,46 +113,15 @@ export const CaseTable: React.FC<CaseTableProps> = ({
                 </td>
                 <td>
                   {c.assignedAgent ? (
-                    <div
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: 6,
-                        fontSize: '0.8rem',
-                        color: 'var(--text-secondary)',
-                        backgroundColor: 'var(--bg-subtle)',
-                        padding: '3px 8px',
-                        borderRadius: 'var(--radius-full)',
-                      }}
-                    >
-                      <span
-                        style={{
-                          width: 6,
-                          height: 6,
-                          borderRadius: '50%',
-                          backgroundColor: '#10b981',
-                        }}
-                      />
+                    <div className="agent-chip">
+                      <span className="agent-dot" />
                       <span>{c.assignedAgent.name}</span>
                     </div>
                   ) : (
-                    <span
-                      style={{
-                        fontSize: '0.75rem',
-                        color: '#b45309',
-                        backgroundColor: '#fef3c7',
-                        padding: '2px 8px',
-                        borderRadius: 'var(--radius-full)',
-                        fontWeight: 500,
-                      }}
-                    >
-                      Unassigned
-                    </span>
+                    <span className="unassigned-chip">Unassigned</span>
                   )}
                 </td>
-                <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
-                  {formatDate(c.createdAt)}
-                </td>
+                <td className="date-cell">{formatDate(c.createdAt)}</td>
               </tr>
             ))
           )}

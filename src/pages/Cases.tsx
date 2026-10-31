@@ -102,41 +102,31 @@ export const Cases: React.FC<CasesProps> = ({
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+    <div className="cases-page">
       {/* Page Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
+      <div className="page-top-bar">
         <div>
-          <h2 style={{ fontSize: '1.25rem', fontWeight: 700 }}>{viewTitles[view] || 'Support Cases'}</h2>
-          <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginTop: 2 }}>
+          <h2 className="page-title">{viewTitles[view] || 'Support Cases'}</h2>
+          <p className="page-desc">
             Manage and resolve customer support tickets from the Junto mobile chat queue.
           </p>
         </div>
-        <div
-          style={{
-            padding: '4px 12px',
-            borderRadius: 'var(--radius-full)',
-            backgroundColor: 'var(--bg-surface)',
-            border: '1px solid var(--border-subtle)',
-            fontSize: '0.8rem',
-            fontWeight: 600,
-            color: 'var(--text-secondary)',
-          }}
-        >
+        <div className="total-pill">
           {totalCases} {totalCases === 1 ? 'case' : 'cases'} total
         </div>
       </div>
 
       {/* Filter & Search Toolbar */}
-      <div className="card" style={{ padding: '14px 18px' }}>
-        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 12, flexWrap: 'wrap' }}>
+      <div className="card filter-toolbar">
+        <div className="filter-row">
           {/* Search */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: 1, minWidth: 200 }}>
-            <label htmlFor="filter-search" style={{ fontSize: '0.72rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--text-muted)' }}>
+          <div className="filter-item search-item">
+            <label htmlFor="filter-search" className="filter-label">
               Search
             </label>
-            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+            <div className="search-input-wrapper">
               <svg
-                style={{ position: 'absolute', left: 10, width: 14, height: 14, color: 'var(--text-muted)', pointerEvents: 'none' }}
+                className="search-icon"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
@@ -151,16 +141,15 @@ export const Cases: React.FC<CasesProps> = ({
                 placeholder="Search case # or customer..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="form-control"
-                style={{ paddingLeft: 32 }}
+                className="form-control with-icon"
               />
             </div>
           </div>
 
           {/* Status Filter */}
           {view !== 'RESOLVED' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 130 }}>
-              <label htmlFor="filter-status" style={{ fontSize: '0.72rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--text-muted)' }}>
+            <div className="filter-item">
+              <label htmlFor="filter-status" className="filter-label">
                 Status
               </label>
               <select
@@ -181,8 +170,8 @@ export const Cases: React.FC<CasesProps> = ({
           )}
 
           {/* Priority Filter */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 130 }}>
-            <label htmlFor="filter-priority" style={{ fontSize: '0.72rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--text-muted)' }}>
+          <div className="filter-item">
+            <label htmlFor="filter-priority" className="filter-label">
               Priority
             </label>
             <select
@@ -200,8 +189,8 @@ export const Cases: React.FC<CasesProps> = ({
           </div>
 
           {/* Category Filter */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 130 }}>
-            <label htmlFor="filter-category" style={{ fontSize: '0.72rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--text-muted)' }}>
+          <div className="filter-item">
+            <label htmlFor="filter-category" className="filter-label">
               Category
             </label>
             <select
@@ -225,8 +214,8 @@ export const Cases: React.FC<CasesProps> = ({
 
           {/* Assigned Agent (for ALL and RESOLVED) */}
           {(view === 'ALL' || view === 'RESOLVED') && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 140 }}>
-              <label htmlFor="filter-agent" style={{ fontSize: '0.72rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--text-muted)' }}>
+            <div className="filter-item">
+              <label htmlFor="filter-agent" className="filter-label">
                 Assigned Agent
               </label>
               <select
@@ -247,8 +236,8 @@ export const Cases: React.FC<CasesProps> = ({
           )}
 
           {/* Sort By */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 130 }}>
-            <label htmlFor="filter-sort" style={{ fontSize: '0.72rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--text-muted)' }}>
+          <div className="filter-item">
+            <label htmlFor="filter-sort" className="filter-label">
               Sort
             </label>
             <select
@@ -265,7 +254,7 @@ export const Cases: React.FC<CasesProps> = ({
           </div>
 
           {/* Reset button */}
-          <div style={{ paddingBottom: 2 }}>
+          <div className="filter-item action-item">
             <button type="button" className="btn btn-secondary btn-sm" onClick={resetFilters} title="Reset all filters">
               Reset
             </button>
@@ -274,19 +263,7 @@ export const Cases: React.FC<CasesProps> = ({
       </div>
 
       {errorMsg && (
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '10px 16px',
-            backgroundColor: '#fef2f2',
-            border: '1px solid #fecaca',
-            borderRadius: 'var(--radius-md)',
-            color: '#b91c1c',
-            fontSize: '0.85rem',
-          }}
-        >
+        <div className="alert-banner">
           <span>{errorMsg}</span>
           <button type="button" className="btn btn-sm btn-secondary" onClick={loadData}>
             Retry
@@ -304,25 +281,13 @@ export const Cases: React.FC<CasesProps> = ({
 
       {/* Pagination Controls */}
       {totalPages > 1 && (
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '12px 16px',
-            backgroundColor: 'var(--bg-surface)',
-            border: '1px solid var(--border-subtle)',
-            borderRadius: 'var(--radius-md)',
-            gap: 16,
-            flexWrap: 'wrap',
-          }}
-        >
-          <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+        <div className="pagination-bar">
+          <div className="pagination-info">
             Showing <strong>{(currentPage - 1) * pageSize + 1}</strong> to{' '}
             <strong>{Math.min(currentPage * pageSize, totalCases)}</strong> of <strong>{totalCases}</strong> cases
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div className="pagination-actions">
             <button
               type="button"
               className="btn btn-secondary btn-sm"
@@ -332,7 +297,7 @@ export const Cases: React.FC<CasesProps> = ({
               ← Previous
             </button>
 
-            <span style={{ fontSize: '0.8rem', fontWeight: 500, color: 'var(--text-secondary)' }}>
+            <span className="page-number-display">
               Page {currentPage} of {totalPages}
             </span>
 

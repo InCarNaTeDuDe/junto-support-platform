@@ -9,79 +9,42 @@ import { Cases } from './pages/Cases';
 import { CaseDetails } from './pages/CaseDetails';
 import { Agents } from './pages/Agents';
 
-// Helper to parse path into page and caseId
-function parseRouteFromPath(path: string): { page: string; caseId: string | null } {
-  const cleanPath = path.split('?')[0].split('#')[0].replace(/\/+$/, '') || '/';
-
-  if (cleanPath === '' || cleanPath === '/' || cleanPath === '/dashboard') {
-    return { page: 'dashboard', caseId: null };
-  }
-  if (cleanPath === '/cases' || cleanPath === '/cases/all') {
-    return { page: 'cases_all', caseId: null };
-  }
-  if (cleanPath === '/cases/my') {
-    return { page: 'cases_my', caseId: null };
-  }
-  if (cleanPath === '/cases/unassigned') {
-    return { page: 'cases_unassigned', caseId: null };
-  }
-  if (cleanPath === '/cases/resolved') {
-    return { page: 'cases_resolved', caseId: null };
-  }
-  if (cleanPath.startsWith('/cases/')) {
-    const caseId = cleanPath.slice('/cases/'.length);
-    if (caseId) {
-      return { page: 'case_details', caseId: decodeURIComponent(caseId) };
-    }
-  }
-  if (cleanPath === '/agents') {
-    return { page: 'agents', caseId: null };
-  }
-  if (cleanPath === '/login') {
-    return { page: 'login', caseId: null };
-  }
-
+function parseRoute(path: string): { page: string; caseId: string | null } {
+  const clean = path.split('?')[0].split('#')[0].replace(/\/+$/, '') || '/';
+  if (clean === '' || clean === '/' || clean === '/dashboard') return { page: 'dashboard', caseId: null };
+  if (clean === '/cases' || clean === '/cases/all') return { page: 'cases_all', caseId: null };
+  if (clean === '/cases/my') return { page: 'cases_my', caseId: null };
+  if (clean === '/cases/unassigned') return { page: 'cases_unassigned', caseId: null };
+  if (clean === '/cases/resolved') return { page: 'cases_resolved', caseId: null };
+  if (clean.startsWith('/cases/')) return { page: 'case_details', caseId: decodeURIComponent(clean.slice(7)) };
+  if (clean === '/agents') return { page: 'agents', caseId: null };
+  if (clean === '/login') return { page: 'login', caseId: null };
   return { page: 'dashboard', caseId: null };
 }
 
-function getPathForRoute(page: string, caseId: string | null): string {
-  switch (page) {
-    case 'dashboard':
-      return '/dashboard';
-    case 'cases_all':
-      return '/cases';
-    case 'cases_my':
-      return '/cases/my';
-    case 'cases_unassigned':
-      return '/cases/unassigned';
-    case 'cases_resolved':
-      return '/cases/resolved';
-    case 'case_details':
-      return caseId ? `/cases/${encodeURIComponent(caseId)}` : '/cases';
-    case 'agents':
-      return '/agents';
-    case 'login':
-      return '/login';
-    default:
-      return '/dashboard';
-  }
+function getPath(page: string, caseId: string | null): string {
+  const routes: Record<string, string> = {
+    dashboard: '/dashboard',
+    cases_all: '/cases',
+    cases_my: '/cases/my',
+    cases_unassigned: '/cases/unassigned',
+    cases_resolved: '/cases/resolved',
+    case_details: caseId ? `/cases/${encodeURIComponent(caseId)}` : '/cases',
+    agents: '/agents',
+    login: '/login',
+  };
+  return routes[page] || '/dashboard';
 }
 
 export const AppContent: React.FC = () => {
   const { isAuthenticated, isAuthorized, isLoading: isAuthLoading, logout } = useAuth();
-
-  const [currentPage, setCurrentPage] = useState<string>(() => {
-    return parseRouteFromPath(window.location.pathname).page;
-  });
-  const [selectedCaseId, setSelectedCaseId] = useState<string | null>(() => {
-    return parseRouteFromPath(window.location.pathname).caseId;
-  });
-
-  const [unassignedCount, setUnassignedCount] = useState<number>(0);
-  const [criticalCount, setCriticalCount] = useState<number>(0);
-  const [isBackendConnected, setIsBackendConnected] = useState<boolean>(true);
-  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState<boolean>(false);
-  const [headerSearchQuery, setHeaderSearchQuery] = useState<string>('');
+  const [currentPage, setCurrentPage] = useState(() => parseRoute(window.location.pathname).page);
+  const [selectedCaseId, setSelectedCaseId] = useState<string | null>(() => parseRoute(window.location.pathname).caseId);
+  const [unassignedCount, setUnassignedCount] = useState(0);
+  const [criticalCount, setCriticalCount] = useState(0);
+  const [isBackendConnected, setIsBackendConnected] = useState(true);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const refreshCounts = useCallback(async () => {
     try {
@@ -94,57 +57,35 @@ export const AppContent: React.FC = () => {
     }
   }, []);
 
-  // Listen for browser Back/Forward navigation
   useEffect(() => {
-    const handlePopState = () => {
-      const { page, caseId } = parseRouteFromPath(window.location.pathname);
-      setCurrentPage(page);
-      setSelectedCaseId(caseId);
+    const handlePop = () => {
+      const route = parseRoute(window.location.pathname);
+      setCurrentPage(route.page);
+      setSelectedCaseId(route.caseId);
     };
-
-    window.addEventListener('popstate', handlePopState);
-    return () => {
-      window.removeEventListener('popstate', handlePopState);
-    };
+    window.addEventListener('popstate', handlePop);
+    return () => window.removeEventListener('popstate', handlePop);
   }, []);
 
-  // Sync route and refresh counts on auth state change
   useEffect(() => {
     if (isAuthenticated && isAuthorized) {
       refreshCounts();
-      // If currently on login route, replace with /dashboard
       if (window.location.pathname === '/login' || window.location.pathname === '/') {
         window.history.replaceState({}, '', '/dashboard');
         setCurrentPage('dashboard');
       }
     } else if (!isAuthLoading && (!isAuthenticated || !isAuthorized)) {
-      if (window.location.pathname !== '/login') {
-        window.history.replaceState({}, '', '/login');
-      }
+      if (window.location.pathname !== '/login') window.history.replaceState({}, '', '/login');
     }
   }, [isAuthenticated, isAuthorized, isAuthLoading, refreshCounts]);
 
   const navigateTo = (page: string, caseId: string | null = null) => {
-    const targetPath = getPathForRoute(page, caseId);
-    if (window.location.pathname !== targetPath) {
-      window.history.pushState({}, '', targetPath);
-    }
+    const path = getPath(page, caseId);
+    if (window.location.pathname !== path) window.history.pushState({}, '', path);
     setCurrentPage(page);
     setSelectedCaseId(caseId);
-    setHeaderSearchQuery('');
+    setSearchQuery('');
     refreshCounts();
-  };
-
-  const handleNavigate = (page: string) => {
-    navigateTo(page, null);
-  };
-
-  const handleSelectCase = (caseId: string) => {
-    navigateTo('case_details', caseId);
-  };
-
-  const handleBackToCases = () => {
-    navigateTo('cases_all', null);
   };
 
   const handleLogout = async () => {
@@ -154,40 +95,28 @@ export const AppContent: React.FC = () => {
     setSelectedCaseId(null);
   };
 
-  const handleQuickSearch = (query: string) => {
-    setHeaderSearchQuery(query);
-    navigateTo('cases_all', null);
-  };
-
-  const pageHeaderTitle: Record<string, string> = {
-    dashboard: 'Operations Dashboard',
-    cases_all: 'All Support Cases',
-    cases_my: 'My Assigned Cases',
-    cases_unassigned: 'Unassigned Queue',
-    cases_resolved: 'Resolved Cases Archive',
-    case_details: selectedCaseId ? `Case Details` : 'Case Details',
-    agents: 'Agent Directory & Roles',
-  };
-
   if (isAuthLoading) {
     return (
       <div className="app-loading-screen">
         <div className="spinner" />
-        <p>Authenticating Junto Support Session...</p>
+        <p>Authenticating session...</p>
       </div>
     );
   }
 
   if (!isAuthenticated || !isAuthorized) {
-    return (
-      <Login
-        onLoginSuccess={() => {
-          refreshCounts();
-          navigateTo('dashboard', null);
-        }}
-      />
-    );
+    return <Login onLoginSuccess={() => { refreshCounts(); navigateTo('dashboard'); }} />;
   }
+
+  const titles: Record<string, string> = {
+    dashboard: 'Operations Dashboard',
+    cases_all: 'All Support Cases',
+    cases_my: 'My Assigned Cases',
+    cases_unassigned: 'Unassigned Queue',
+    cases_resolved: 'Resolved Cases',
+    case_details: 'Case Details',
+    agents: 'Agent Directory',
+  };
 
   return (
     <div className="app-shell">
@@ -196,72 +125,27 @@ export const AppContent: React.FC = () => {
         unassignedCount={unassignedCount}
         criticalCount={criticalCount}
         isOpenMobile={isMobileSidebarOpen}
-        onNavigate={handleNavigate}
+        onNavigate={(p) => navigateTo(p)}
         onCloseMobile={() => setIsMobileSidebarOpen(false)}
         onLogout={handleLogout}
       />
 
       <div className="main-wrapper">
         <Header
-          title={pageHeaderTitle[currentPage] || 'Dashboard'}
-          subtitle="Junto Mobile Support System"
+          title={titles[currentPage] || 'Dashboard'}
           isBackendConnected={isBackendConnected}
           onToggleSidebar={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
-          onQuickSearch={handleQuickSearch}
+          onQuickSearch={(q) => { setSearchQuery(q); navigateTo('cases_all'); }}
           onRefresh={refreshCounts}
         />
 
         <main className="content-area">
-          {currentPage === 'dashboard' && (
-            <Dashboard
-              onSelectCase={handleSelectCase}
-              onNavigate={handleNavigate}
-            />
-          )}
-
-          {currentPage === 'cases_all' && (
-            <Cases
-              key={`all-${headerSearchQuery}`}
-              view="ALL"
-              initialSearch={headerSearchQuery}
-              onSelectCase={handleSelectCase}
-            />
-          )}
-
-          {currentPage === 'cases_my' && (
-            <Cases
-              key={`my-${headerSearchQuery}`}
-              view="MY_CASES"
-              initialSearch={headerSearchQuery}
-              onSelectCase={handleSelectCase}
-            />
-          )}
-
-          {currentPage === 'cases_unassigned' && (
-            <Cases
-              key={`unassigned-${headerSearchQuery}`}
-              view="UNASSIGNED"
-              initialSearch={headerSearchQuery}
-              onSelectCase={handleSelectCase}
-            />
-          )}
-
-          {currentPage === 'cases_resolved' && (
-            <Cases
-              key={`resolved-${headerSearchQuery}`}
-              view="RESOLVED"
-              initialSearch={headerSearchQuery}
-              onSelectCase={handleSelectCase}
-            />
-          )}
-
-          {currentPage === 'case_details' && selectedCaseId && (
-            <CaseDetails
-              caseId={selectedCaseId}
-              onBack={handleBackToCases}
-            />
-          )}
-
+          {currentPage === 'dashboard' && <Dashboard onSelectCase={(id) => navigateTo('case_details', id)} onNavigate={(p) => navigateTo(p)} />}
+          {currentPage === 'cases_all' && <Cases key={`all-${searchQuery}`} view="ALL" initialSearch={searchQuery} onSelectCase={(id) => navigateTo('case_details', id)} />}
+          {currentPage === 'cases_my' && <Cases key={`my-${searchQuery}`} view="MY_CASES" initialSearch={searchQuery} onSelectCase={(id) => navigateTo('case_details', id)} />}
+          {currentPage === 'cases_unassigned' && <Cases key={`u-${searchQuery}`} view="UNASSIGNED" initialSearch={searchQuery} onSelectCase={(id) => navigateTo('case_details', id)} />}
+          {currentPage === 'cases_resolved' && <Cases key={`r-${searchQuery}`} view="RESOLVED" initialSearch={searchQuery} onSelectCase={(id) => navigateTo('case_details', id)} />}
+          {currentPage === 'case_details' && selectedCaseId && <CaseDetails caseId={selectedCaseId} onBack={() => navigateTo('cases_all')} />}
           {currentPage === 'agents' && <Agents />}
         </main>
       </div>

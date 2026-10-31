@@ -11,243 +11,168 @@ export const Agents: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
-  const [successNotice, setSuccessNotice] = useState('');
+  const [notice, setNotice] = useState('');
 
-  // Add Agent Modal State
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [newName, setNewName] = useState('');
-  const [newEmail, setNewEmail] = useState('');
-  const [newUserId, setNewUserId] = useState('');
+  const [showModal, setShowModal] = useState(false);
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [userId, setUserId] = useState('');
   const [newRole, setNewRole] = useState<AgentRole>('SUPPORT');
 
-  const showNotice = (msg: string) => {
-    setSuccessNotice(msg);
-    setTimeout(() => {
-      setSuccessNotice((prev) => (prev === msg ? '' : prev));
-    }, 3500);
+  const flash = (msg: string) => {
+    setNotice(msg);
+    setTimeout(() => setNotice((p) => (p === msg ? '' : p)), 3500);
   };
 
   const loadAgents = useCallback(async () => {
     setIsLoading(true);
     setErrorMsg('');
     try {
-      const list = await supportService.getAgents();
-      setAgents(list);
+      setAgents(await supportService.getAgents());
     } catch (err: any) {
-      setErrorMsg(err.message || 'Failed to load support agents list');
+      setErrorMsg(err.message || 'Failed to load agents');
     } finally {
       setIsLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    if (isOwner) {
-      loadAgents();
-    }
+    if (isOwner) loadAgents();
   }, [isOwner, loadAgents]);
 
-  const handleCreateAgent = async (e: React.FormEvent) => {
+  const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newName.trim() || !newEmail.trim() || isSubmitting) return;
-
+    if (!name.trim() || !email.trim() || isSubmitting) return;
     setIsSubmitting(true);
     setErrorMsg('');
-
     try {
       const created = await supportService.createAgent({
-        userId: newUserId.trim() || undefined,
-        name: newName.trim(),
-        email: newEmail.trim().toLowerCase(),
+        userId: userId.trim() || undefined,
+        name: name.trim(),
+        email: email.trim().toLowerCase(),
         role: newRole,
       });
-
-      showNotice(`Agent ${created.name} (${created.email}) authorized successfully!`);
-      setShowAddModal(false);
-      setNewName('');
-      setNewEmail('');
-      setNewUserId('');
-      setNewRole('SUPPORT');
+      flash(`Agent ${created.name} authorized!`);
+      setShowModal(false);
+      setName('');
+      setEmail('');
+      setUserId('');
       await loadAgents();
     } catch (err: any) {
-      setErrorMsg(err.message || 'Failed to authorize agent');
+      setErrorMsg(err.message || 'Failed to add agent');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleToggleStatus = async (agent: SupportAgent) => {
-    const newStatus: AgentStatus = agent.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
-    if (agent.id === user?.id && newStatus === 'INACTIVE') {
-      alert('You cannot deactivate your own account.');
-      return;
-    }
-
+  const toggleStatus = async (ag: SupportAgent) => {
+    const next: AgentStatus = ag.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
+    if (ag.id === user?.id && next === 'INACTIVE') return;
     try {
-      await supportService.updateAgentStatus(agent.id, newStatus);
-      showNotice(`Agent ${agent.name} marked as ${newStatus}.`);
+      await supportService.updateAgentStatus(ag.id, next);
+      flash(`${ag.name} marked as ${next}`);
       await loadAgents();
     } catch (err: any) {
-      setErrorMsg(err.message || 'Failed to update agent status');
+      setErrorMsg(err.message || 'Failed to update status');
     }
   };
 
-  const handleChangeRole = async (agent: SupportAgent, updatedRole: AgentRole) => {
-    if (agent.id === user?.id && updatedRole !== 'OWNER') {
-      alert('You cannot demote your own account.');
-      return;
-    }
-
+  const changeRole = async (ag: SupportAgent, r: AgentRole) => {
+    if (ag.id === user?.id && r !== 'OWNER') return;
     try {
-      await supportService.updateAgentRole(agent.id, updatedRole);
-      showNotice(`Agent ${agent.name} role changed to ${updatedRole}.`);
+      await supportService.updateAgentRole(ag.id, r);
+      flash(`${ag.name} role changed to ${r}`);
       await loadAgents();
     } catch (err: any) {
-      setErrorMsg(err.message || 'Failed to change agent role');
+      setErrorMsg(err.message || 'Failed to update role');
     }
-  };
-
-  const formatDate = (iso?: string): string => {
-    if (!iso) return 'Never';
-    return new Date(iso).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    });
   };
 
   if (!isOwner) {
     return (
-      <div className="card access-denied-box">
-        <div className="denied-icon">
-          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <circle cx="12" cy="12" r="10" />
-            <line x1="4.93" y1="4.93" x2="19.07" y2="19.07" />
-          </svg>
-        </div>
+      <div className="card" style={{ padding: 32, textAlign: 'center' }}>
         <h2>Owner Authorization Required</h2>
-        <p>Only users with the <strong>OWNER</strong> role can manage support agents and permissions in Junto.</p>
+        <p style={{ marginTop: 8 }}>Only users with the OWNER role can manage agents and permissions.</p>
       </div>
     );
   }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-      {/* Top Bar */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
         <div>
-          <h2 style={{ fontSize: '1.25rem', fontWeight: 700 }}>Support Agents & Access Control</h2>
-          <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginTop: 2 }}>
-            Authorized team members who can log in to Junto Support Management with Google.
-          </p>
+          <h2>Support Agents & Access Control</h2>
+          <p style={{ marginTop: 2 }}>Authorized Google accounts with access to the dashboard.</p>
         </div>
-
-        <button type="button" className="btn btn-primary" onClick={() => setShowAddModal(true)}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <line x1="12" y1="5" x2="12" y2="19" />
-            <line x1="5" y1="12" x2="19" y2="12" />
-          </svg>
-          <span>Add Authorized Agent</span>
+        <button type="button" className="btn btn-primary" onClick={() => setShowModal(true)}>
+          + Add Authorized Agent
         </button>
       </div>
 
-      {successNotice && (
-        <div className="success-banner">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <polyline points="20 6 9 17 4 12" />
-          </svg>
-          <span>{successNotice}</span>
-        </div>
-      )}
-
+      {notice && <div className="alert-banner" style={{ background: '#ecfdf5', borderColor: '#a7f3d0', color: '#047857' }}>{notice}</div>}
       {errorMsg && (
         <div className="alert-banner">
           <span>{errorMsg}</span>
-          <button type="button" className="btn btn-sm btn-secondary" onClick={loadAgents}>
-            Retry
-          </button>
+          <button type="button" className="btn btn-sm btn-secondary" onClick={loadAgents}>Retry</button>
         </div>
       )}
 
-      {/* Agents Table */}
       <div className="table-responsive">
         <table className="data-table">
           <thead>
             <tr>
-              <th>Agent Name</th>
-              <th>Authorized Google Email</th>
+              <th>Agent</th>
+              <th>Google Email</th>
               <th style={{ width: 140 }}>Role</th>
-              <th style={{ width: 130 }}>Status</th>
-              <th style={{ width: 140 }}>Member Since</th>
-              <th style={{ width: 130 }}>Actions</th>
+              <th style={{ width: 120 }}>Status</th>
+              <th style={{ width: 120 }}>Actions</th>
             </tr>
           </thead>
           <tbody>
             {isLoading ? (
-              <tr>
-                <td colSpan={6}>
-                  <div className="state-container">
-                    <div className="spinner" />
-                    <h3>Loading agent list...</h3>
-                  </div>
-                </td>
-              </tr>
+              <tr><td colSpan={5}><div className="state-container"><div className="spinner" /><h3>Loading agents...</h3></div></td></tr>
             ) : agents.length === 0 ? (
-              <tr>
-                <td colSpan={6}>
-                  <div className="state-container">
-                    <h3>No agents found</h3>
-                  </div>
-                </td>
-              </tr>
+              <tr><td colSpan={5}><div className="state-container"><h3>No agents found</h3></div></td></tr>
             ) : (
               agents.map((ag) => (
                 <tr key={ag.id}>
                   <td>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <div className="agent-avatar">
-                        {ag.name.slice(0, 2).toUpperCase()}
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <span style={{ fontWeight: 600 }}>{ag.name}</span>
-                        {ag.id === user?.id && <span className="you-tag">(You)</span>}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <div className="agent-avatar">{ag.name.slice(0, 2).toUpperCase()}</div>
+                      <div>
+                        <strong>{ag.name}</strong>
+                        {ag.id === user?.id && <span style={{ marginLeft: 6, fontSize: '0.75rem', color: 'var(--text-muted)' }}>(You)</span>}
                       </div>
                     </div>
                   </td>
-                  <td>
-                    <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>{ag.email}</span>
-                  </td>
+                  <td>{ag.email}</td>
                   <td>
                     <select
                       className="form-select form-select-sm"
                       value={ag.role}
                       disabled={ag.id === user?.id}
-                      onChange={(e) => handleChangeRole(ag, e.target.value as AgentRole)}
+                      onChange={(e) => changeRole(ag, e.target.value as AgentRole)}
                     >
                       <option value="SUPPORT">SUPPORT</option>
                       <option value="OWNER">OWNER</option>
                     </select>
                   </td>
                   <td>
-                    <span className={`status-pill ${ag.status === 'ACTIVE' ? 'active-pill' : 'inactive-pill'}`}>
+                    <span className={`badge ${ag.status === 'ACTIVE' ? 'badge-resolved' : 'badge-closed'}`}>
                       {ag.status}
                     </span>
-                  </td>
-                  <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                    {formatDate(ag.createdAt)}
                   </td>
                   <td>
                     {ag.id !== user?.id ? (
                       <button
                         type="button"
                         className={`btn btn-sm ${ag.status === 'ACTIVE' ? 'btn-secondary' : 'btn-primary'}`}
-                        onClick={() => handleToggleStatus(ag)}
+                        onClick={() => toggleStatus(ag)}
                       >
                         {ag.status === 'ACTIVE' ? 'Deactivate' : 'Activate'}
                       </button>
                     ) : (
-                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
-                        Current user
-                      </span>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Current User</span>
                     )}
                   </td>
                 </tr>
@@ -257,91 +182,33 @@ export const Agents: React.FC = () => {
         </table>
       </div>
 
-      {/* Add Agent Modal */}
-      {showAddModal && (
-        <div
-          className="modal-overlay"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setShowAddModal(false);
-          }}
-          role="dialog"
-        >
+      {showModal && (
+        <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && setShowModal(false)}>
           <div className="modal-content">
             <div className="card-header">
-              <h3>Add Authorized Support Agent</h3>
-              <button type="button" className="btn-icon" onClick={() => setShowAddModal(false)}>
-                ✕
-              </button>
+              <h3>Authorize Support Agent</h3>
+              <button type="button" className="btn-icon" onClick={() => setShowModal(false)}>✕</button>
             </div>
-
-            <form onSubmit={handleCreateAgent}>
+            <form onSubmit={handleCreate}>
               <div className="form-group">
-                <label htmlFor="agent-new-name" className="form-label">Full Name</label>
-                <input
-                  id="agent-new-name"
-                  type="text"
-                  className="form-control"
-                  placeholder="e.g. Jordan Smith"
-                  value={newName}
-                  onChange={(e) => setNewName(e.target.value)}
-                  required
-                />
+                <label className="form-label">Full Name</label>
+                <input className="form-control" placeholder="Jordan Smith" value={name} onChange={(e) => setName(e.target.value)} required />
               </div>
-
               <div className="form-group">
-                <label htmlFor="agent-new-email" className="form-label">Google Workspace / Login Email</label>
-                <input
-                  id="agent-new-email"
-                  type="email"
-                  className="form-control"
-                  placeholder="jordan.support@junto.com"
-                  value={newEmail}
-                  onChange={(e) => setNewEmail(e.target.value)}
-                  required
-                />
-                <span className="form-hint">Must match their Google Sign-In identity to be authorized.</span>
+                <label className="form-label">Google Login Email</label>
+                <input className="form-control" type="email" placeholder="jordan@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
               </div>
-
               <div className="form-group">
-                <label htmlFor="agent-new-userid" className="form-label">Junto User ID (Optional UUID)</label>
-                <input
-                  id="agent-new-userid"
-                  type="text"
-                  className="form-control font-mono"
-                  placeholder="e.g. user-uuid-5001"
-                  value={newUserId}
-                  onChange={(e) => setNewUserId(e.target.value)}
-                />
-                <span className="form-hint">Optional UUID if user already exists in PostgreSQL users table.</span>
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="agent-new-role" className="form-label">Role</label>
-                <select
-                  id="agent-new-role"
-                  className="form-select"
-                  value={newRole}
-                  onChange={(e) => setNewRole(e.target.value as AgentRole)}
-                >
-                  <option value="SUPPORT">SUPPORT (Manage cases, customer chat, notes)</option>
-                  <option value="OWNER">OWNER (Full administrative access & agent management)</option>
+                <label className="form-label">Role</label>
+                <select className="form-select" value={newRole} onChange={(e) => setNewRole(e.target.value as AgentRole)}>
+                  <option value="SUPPORT">SUPPORT</option>
+                  <option value="OWNER">OWNER</option>
                 </select>
               </div>
-
               <div className="modal-actions">
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={() => setShowAddModal(false)}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="btn btn-primary"
-                  disabled={isSubmitting || !newName.trim() || !newEmail.trim()}
-                >
-                  {isSubmitting ? 'Saving...' : 'Authorize Agent'}
+                <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>Cancel</button>
+                <button type="submit" className="btn btn-primary" disabled={isSubmitting || !name.trim() || !email.trim()}>
+                  {isSubmitting ? 'Saving...' : 'Authorize'}
                 </button>
               </div>
             </form>

@@ -50,21 +50,16 @@ export interface SupportCaseMessage {
   id: string;
   caseId?: string;
   senderType: MessageSenderType;
-  sender?: {
-    id: string;
-    name: string;
-    role?: AgentRole;
-  };
+  sender?: { id: string; name: string; role?: AgentRole };
   senderId?: string;
   senderName?: string;
   senderRole?: AgentRole;
   message: string;
-  content?: string; // alias for message compatibility
+  content?: string;
   isInternalNote: boolean;
   createdAt: string;
 }
 
-// Backward-compatibility alias
 export type CaseMessage = SupportCaseMessage;
 
 export interface SupportCase {
@@ -79,12 +74,7 @@ export interface SupportCase {
   description?: string;
   priority: CasePriority;
   status: CaseStatus;
-  assignedAgent?: {
-    id: string;
-    name: string;
-    role?: AgentRole;
-    email?: string;
-  } | null;
+  assignedAgent?: { id: string; name: string; role?: AgentRole; email?: string } | null;
   assignedAgentId?: string | null;
   relatedEntity?: RelatedEntity | null;
   createdAt: string;
@@ -95,7 +85,7 @@ export interface SupportCase {
   messages?: SupportCaseMessage[];
 }
 
-export interface DashboardSummary {
+export interface CasesSummary {
   totalCases: number;
   openCases: number;
   assignedCases: number;
@@ -105,10 +95,6 @@ export interface DashboardSummary {
   unassignedCases: number;
   criticalCases: number;
   highPriorityCases: number;
-}
-
-// Backward-compatibility alias for Dashboard UI
-export interface CasesSummary extends DashboardSummary {
   total: number;
   open: number;
   inProgress: number;
@@ -118,28 +104,13 @@ export interface CasesSummary extends DashboardSummary {
   unassigned: number;
 }
 
-export interface PaginationInfo {
-  page: number;
-  limit: number;
-  totalRecords: number;
-  totalPages: number;
-}
-
-export interface ApiResponse<T> {
-  success: boolean;
-  message?: string;
-  data?: T;
-  pagination?: PaginationInfo;
-  error?: string;
-}
-
 export interface CaseFilterOptions {
   search?: string;
   status?: CaseStatus | 'ALL';
   priority?: CasePriority | 'ALL';
   category?: CaseCategory | 'ALL';
-  assignedTo?: string; // agent UUID or 'unassigned'
-  assignedAgentId?: string | 'ALL' | 'UNASSIGNED'; // alias
+  assignedTo?: string;
+  assignedAgentId?: string | 'ALL' | 'UNASSIGNED';
   view?: 'ALL' | 'MY_CASES' | 'UNASSIGNED' | 'RESOLVED';
   sortBy?: 'newest' | 'oldest' | 'priority' | 'status';
   page?: number;

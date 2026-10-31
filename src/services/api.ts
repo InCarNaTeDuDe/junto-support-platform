@@ -1,26 +1,12 @@
-/**
- * Centralized API client for Junto Support Management Dashboard.
- * Configured via VITE_API_BASE_URL or VITE_JUNTO_API_BASE_URL (defaults to /api).
- * Supports HttpOnly session cookies (credentials: 'include') and Bearer auth headers.
- */
-
 export class ApiError extends Error {
   status: number;
   data: any;
-  isSessionExpired: boolean;
-  isAccessDenied: boolean;
-  isNotFound: boolean;
-  isServerError: boolean;
 
   constructor(status: number, message: string, data?: any) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
     this.data = data;
-    this.isSessionExpired = status === 401;
-    this.isAccessDenied = status === 403;
-    this.isNotFound = status === 404;
-    this.isServerError = status >= 500;
   }
 }
 
@@ -29,36 +15,11 @@ export const API_BASE_URL =
   (import.meta.env.VITE_JUNTO_API_BASE_URL as string) ||
   '/api';
 
-export class ApiClient {
-  private baseUrl: string;
+class ApiClient {
+  private base: string;
 
-  constructor(baseUrl: string) {
-    this.baseUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
-  }
-
-  public getBaseUrl(): string {
-    return this.baseUrl;
-  }
-
-  public buildUrl(endpoint: string): string {
-    if (endpoint.startsWith('http://') || endpoint.startsWith('https://')) {
-      return endpoint;
-    }
-
-    const base = this.baseUrl.endsWith('/') ? this.baseUrl.slice(0, -1) : this.baseUrl;
-    const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
-
-    // Prevent duplicate /api if baseUrl already has /api
-    if (base.endsWith('/api') && cleanEndpoint.startsWith('/api/')) {
-      return `${base}${cleanEndpoint.slice(4)}`;
-    }
-
-    // Prevent duplicate /support if baseUrl already ends in /support
-    if (base.endsWith('/support') && cleanEndpoint.startsWith('/support/')) {
-      return `${base}${cleanEndpoint.slice(8)}`;
-    }
-
-    return `${base}${cleanEndpoint}`;
+  constructor(base: string) {
+    this.base = base.replace(/\/+$/, '');
   }
 
   public getToken(): string | null {
@@ -71,107 +32,64 @@ export class ApiClient {
 
   public setToken(token: string | null): void {
     try {
-      if (token) {
-        localStorage.setItem('junto_support_token', token);
-      } else {
-        localStorage.removeItem('junto_support_token');
-      }
-    } catch (e) {
-      console.warn('Unable to persist token to localStorage', e);
+      token ? localStorage.setItem('junto_support_token', token) : localStorage.removeItem('junto_support_token');
+    } catch {
+      // Ignore storage errors
     }
+  }
+
+  public buildUrl(path: string): string {
+    if (/^https?:\/\//i.test(path)) return path;
+    const clean = path.startsWith('/') ? path : `/${path}`;
+    return this.base.endsWith('/api') && clean.startsWith('/api/')
+      ? `${this.base}${clean.slice(4)}`
+      : `${this.base}${clean}`;
   }
 
   public async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const url = this.buildUrl(endpoint);
-
+    const token = this.getToken();
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       Accept: 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...((options.headers as Record<string, string>) || {}),
     };
 
-    const token = this.getToken();
-    if (token && !headers['Authorization']) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
-
-    const config: RequestInit = {
-      ...options,
-      headers,
-      credentials: 'include', // Transmit HttpOnly session cookies
-    };
-
     try {
-      const response = await fetch(url, config);
+      const res = await fetch(url, { ...options, headers, credentials: 'include' });
+      if (res.status === 204) return {} as T;
 
-      if (response.status === 204) {
-        return {} as T;
+      const isJson = res.headers.get('content-type')?.includes('application/json');
+      const data = isJson ? await res.json() : await res.text();
+
+      if (!res.ok) {
+        const msg = (typeof data === 'object' && (data?.error || data?.message)) || res.statusText || 'API error';
+        throw new ApiError(res.status, msg, data);
       }
-
-      let responseData: any;
-      const contentType = response.headers.get('content-type');
-      if (contentType && contentType.includes('application/json')) {
-        responseData = await response.json();
-      } else {
-        responseData = await response.text();
-      }
-
-      if (!response.ok) {
-        const errorMessage =
-          (responseData && typeof responseData === 'object' && (responseData.error || responseData.message)) ||
-          response.statusText ||
-          `Request failed with status ${response.status}`;
-
-        throw new ApiError(response.status, errorMessage, responseData);
-      }
-
-      return responseData as T;
-    } catch (error) {
-      if (error instanceof ApiError) {
-        throw error;
-      }
-
-      // Network error, fetch abort or offline
-      throw new ApiError(0, (error as Error).message || 'Network error occurred. Check backend connection.');
+      return data as T;
+    } catch (err: any) {
+      if (err instanceof ApiError) throw err;
+      throw new ApiError(0, err.message || 'Network error');
     }
   }
 
   public get<T>(endpoint: string, params?: Record<string, any>): Promise<T> {
-    let url = endpoint;
-    if (params) {
-      const queryParams = new URLSearchParams();
-      Object.entries(params).forEach(([key, value]) => {
-        if (value !== undefined && value !== null && value !== '' && value !== 'ALL') {
-          queryParams.append(key, String(value));
-        }
-      });
-      const qs = queryParams.toString();
-      if (qs) {
-        url += (url.includes('?') ? '&' : '?') + qs;
-      }
-    }
-    return this.request<T>(url, { method: 'GET' });
+    if (!params) return this.request<T>(endpoint, { method: 'GET' });
+    const qs = new URLSearchParams();
+    Object.entries(params).forEach(([k, v]) => {
+      if (v !== undefined && v !== null && v !== '' && v !== 'ALL') qs.append(k, String(v));
+    });
+    const query = qs.toString();
+    return this.request<T>(query ? `${endpoint}${endpoint.includes('?') ? '&' : '?'}${query}` : endpoint, { method: 'GET' });
   }
 
   public post<T>(endpoint: string, body?: any): Promise<T> {
-    return this.request<T>(endpoint, {
-      method: 'POST',
-      body: body ? JSON.stringify(body) : undefined,
-    });
+    return this.request<T>(endpoint, { method: 'POST', body: body ? JSON.stringify(body) : undefined });
   }
 
   public patch<T>(endpoint: string, body?: any): Promise<T> {
-    return this.request<T>(endpoint, {
-      method: 'PATCH',
-      body: body ? JSON.stringify(body) : undefined,
-    });
-  }
-
-  public put<T>(endpoint: string, body?: any): Promise<T> {
-    return this.request<T>(endpoint, {
-      method: 'PUT',
-      body: body ? JSON.stringify(body) : undefined,
-    });
+    return this.request<T>(endpoint, { method: 'PATCH', body: body ? JSON.stringify(body) : undefined });
   }
 
   public delete<T>(endpoint: string): Promise<T> {

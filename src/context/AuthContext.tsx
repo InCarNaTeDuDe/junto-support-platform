@@ -9,68 +9,63 @@ export interface AuthContextType {
   role: AgentRole | null;
   isLoading: boolean;
   error: string | null;
-  initialize: () => Promise<void>;
   loginWithGoogleIdToken: (idToken: string) => Promise<{ success: boolean; authorized: boolean; error?: string }>;
   loginWithExistingToken: (token: string) => Promise<{ success: boolean; authorized: boolean; error?: string }>;
   logout: () => Promise<void>;
-  clearError: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<SupportAgent | null>(null);
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
-  const [isAuthorized, setIsAuthorized] = useState<boolean>(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAuthorized, setIsAuthorized] = useState(false);
   const [role, setRole] = useState<AgentRole | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const initialize = async () => {
+  const init = async () => {
     setIsLoading(true);
-    setError(null);
     try {
-      const session = await authService.getSession();
-      setUser(session.user);
-      setIsAuthenticated(session.isAuthenticated);
-      setIsAuthorized(session.isAuthorized);
-      setRole(session.role);
-    } catch (err: any) {
-      setUser(null);
-      setIsAuthenticated(false);
-      setIsAuthorized(false);
-      setRole(null);
-      setError(err.message || 'Failed to authenticate');
+      const s = await authService.getSession();
+      setUser(s.user);
+      setIsAuthenticated(s.isAuthenticated);
+      setIsAuthorized(s.isAuthorized);
+      setRole(s.role);
+    } catch (e: any) {
+      setError(e.message);
     } finally {
       setIsLoading(false);
     }
   };
 
-  useEffect(() => {
-    initialize();
-  }, []);
+  useEffect(() => { init(); }, []);
+
+  const handleAuthResult = (s: any) => {
+    setUser(s.user);
+    setIsAuthenticated(s.isAuthenticated);
+    setIsAuthorized(s.isAuthorized);
+    setRole(s.role);
+    setIsLoading(false);
+    return { success: true, authorized: s.isAuthorized };
+  };
 
   const loginWithGoogleIdToken = async (idToken: string) => {
     setIsLoading(true);
     setError(null);
     try {
-      const session = await authService.loginWithGoogleIdToken(idToken);
-      setUser(session.user);
-      setIsAuthenticated(session.isAuthenticated);
-      setIsAuthorized(session.isAuthorized);
-      setRole(session.role);
-      setIsLoading(false);
-      return { success: true, authorized: session.isAuthorized };
+      const s = await authService.loginWithGoogleIdToken(idToken);
+      return handleAuthResult(s);
     } catch (err: any) {
-      const isForbidden = err.status === 403;
-      setUser(isForbidden ? err.data?.data || err.data?.user || null : null);
-      setIsAuthenticated(isForbidden);
+      const forbidden = err.status === 403;
+      setUser(forbidden ? err.data?.data || err.data?.user || null : null);
+      setIsAuthenticated(forbidden);
       setIsAuthorized(false);
       setRole(null);
       setIsLoading(false);
-      const errMsg = err.message || 'Google authentication failed';
-      setError(errMsg);
-      return { success: false, authorized: false, error: errMsg };
+      const msg = err.message || 'Google authentication failed';
+      setError(msg);
+      return { success: false, authorized: false, error: msg };
     }
   };
 
@@ -78,22 +73,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setIsLoading(true);
     setError(null);
     try {
-      const session = await authService.loginWithExistingToken(token);
-      setUser(session.user);
-      setIsAuthenticated(session.isAuthenticated);
-      setIsAuthorized(session.isAuthorized);
-      setRole(session.role);
-      setIsLoading(false);
-      return { success: true, authorized: session.isAuthorized };
+      const s = await authService.loginWithExistingToken(token);
+      return handleAuthResult(s);
     } catch (err: any) {
       setUser(null);
       setIsAuthenticated(false);
       setIsAuthorized(false);
       setRole(null);
       setIsLoading(false);
-      const errMsg = err.message || 'Authentication with token failed';
-      setError(errMsg);
-      return { success: false, authorized: false, error: errMsg };
+      const msg = err.message || 'Authentication failed';
+      setError(msg);
+      return { success: false, authorized: false, error: msg };
     }
   };
 
@@ -111,8 +101,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  const clearError = () => setError(null);
-
   return (
     <AuthContext.Provider
       value={{
@@ -122,11 +110,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         role,
         isLoading,
         error,
-        initialize,
         loginWithGoogleIdToken,
         loginWithExistingToken,
         logout,
-        clearError,
       }}
     >
       {children}
@@ -134,10 +120,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   );
 };
 
-export const useAuth = (): AuthContextType => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
+export const useAuth = () => {
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error('useAuth must be used within AuthProvider');
+  return ctx;
 };

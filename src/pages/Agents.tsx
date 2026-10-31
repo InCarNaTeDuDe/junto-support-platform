@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { supportService } from '../services/support';
 import { useAuth } from '../context/AuthContext';
 import type { SupportAgent, AgentRole, AgentStatus } from '../types/user';
 
 export const Agents: React.FC = () => {
-  const { user: currentUser, role } = useAuth();
+  const { user, role } = useAuth();
   const isOwner = role === 'OWNER';
 
   const [agents, setAgents] = useState<SupportAgent[]>([]);
@@ -13,7 +13,7 @@ export const Agents: React.FC = () => {
   const [errorMsg, setErrorMsg] = useState('');
   const [successNotice, setSuccessNotice] = useState('');
 
-  // Modal State
+  // Add Agent Modal State
   const [showAddModal, setShowAddModal] = useState(false);
   const [newName, setNewName] = useState('');
   const [newEmail, setNewEmail] = useState('');
@@ -77,7 +77,7 @@ export const Agents: React.FC = () => {
 
   const handleToggleStatus = async (agent: SupportAgent) => {
     const newStatus: AgentStatus = agent.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
-    if (agent.id === currentUser?.id && newStatus === 'INACTIVE') {
+    if (agent.id === user?.id && newStatus === 'INACTIVE') {
       alert('You cannot deactivate your own account.');
       return;
     }
@@ -91,15 +91,15 @@ export const Agents: React.FC = () => {
     }
   };
 
-  const handleChangeRole = async (agent: SupportAgent, selectedRole: AgentRole) => {
-    if (agent.id === currentUser?.id && selectedRole !== 'OWNER') {
+  const handleChangeRole = async (agent: SupportAgent, updatedRole: AgentRole) => {
+    if (agent.id === user?.id && updatedRole !== 'OWNER') {
       alert('You cannot demote your own account.');
       return;
     }
 
     try {
-      await supportService.updateAgentRole(agent.id, selectedRole);
-      showNotice(`Agent ${agent.name} role changed to ${selectedRole}.`);
+      await supportService.updateAgentRole(agent.id, updatedRole);
+      showNotice(`Agent ${agent.name} role changed to ${updatedRole}.`);
       await loadAgents();
     } catch (err: any) {
       setErrorMsg(err.message || 'Failed to change agent role');
@@ -117,35 +117,22 @@ export const Agents: React.FC = () => {
 
   if (!isOwner) {
     return (
-      <div className="card" style={{ padding: '48px 24px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
-        <div
-          style={{
-            width: 64,
-            height: 64,
-            borderRadius: '50%',
-            backgroundColor: '#fee2e2',
-            color: '#dc2626',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
+      <div className="card access-denied-box">
+        <div className="denied-icon">
           <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <circle cx="12" cy="12" r="10" />
             <line x1="4.93" y1="4.93" x2="19.07" y2="19.07" />
           </svg>
         </div>
-        <h2 style={{ fontSize: '1.25rem', color: '#b91c1c' }}>Owner Authorization Required</h2>
-        <p style={{ maxWidth: 480, color: 'var(--text-secondary)', fontSize: '0.88rem' }}>
-          Only users with the <strong>OWNER</strong> role can manage support agents and permissions in Junto.
-        </p>
+        <h2>Owner Authorization Required</h2>
+        <p>Only users with the <strong>OWNER</strong> role can manage support agents and permissions in Junto.</p>
       </div>
     );
   }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-      {/* Page Top Bar */}
+      {/* Top Bar */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
         <div>
           <h2 style={{ fontSize: '1.25rem', fontWeight: 700 }}>Support Agents & Access Control</h2>
@@ -154,7 +141,7 @@ export const Agents: React.FC = () => {
           </p>
         </div>
 
-        <button className="btn btn-primary" onClick={() => setShowAddModal(true)}>
+        <button type="button" className="btn btn-primary" onClick={() => setShowAddModal(true)}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <line x1="12" y1="5" x2="12" y2="19" />
             <line x1="5" y1="12" x2="19" y2="12" />
@@ -164,19 +151,7 @@ export const Agents: React.FC = () => {
       </div>
 
       {successNotice && (
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-            padding: '10px 16px',
-            backgroundColor: '#ecfdf5',
-            border: '1px solid #a7f3d0',
-            borderRadius: 'var(--radius-md)',
-            color: '#047857',
-            fontSize: '0.85rem',
-          }}
-        >
+        <div className="success-banner">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <polyline points="20 6 9 17 4 12" />
           </svg>
@@ -185,26 +160,15 @@ export const Agents: React.FC = () => {
       )}
 
       {errorMsg && (
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '10px 16px',
-            backgroundColor: '#fef2f2',
-            border: '1px solid #fecaca',
-            borderRadius: 'var(--radius-md)',
-            color: '#b91c1c',
-            fontSize: '0.85rem',
-          }}
-        >
+        <div className="alert-banner">
           <span>{errorMsg}</span>
-          <button className="btn btn-sm btn-secondary" onClick={loadAgents}>
+          <button type="button" className="btn btn-sm btn-secondary" onClick={loadAgents}>
             Retry
           </button>
         </div>
       )}
 
+      {/* Agents Table */}
       <div className="table-responsive">
         <table className="data-table">
           <thead>
@@ -236,79 +200,49 @@ export const Agents: React.FC = () => {
                 </td>
               </tr>
             ) : (
-              agents.map((agent) => (
-                <tr key={agent.id}>
+              agents.map((ag) => (
+                <tr key={ag.id}>
                   <td>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <div
-                        style={{
-                          width: 32,
-                          height: 32,
-                          borderRadius: '50%',
-                          backgroundColor: '#dbeafe',
-                          color: '#1e40af',
-                          fontSize: '0.75rem',
-                          fontWeight: 700,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          flexShrink: 0,
-                        }}
-                      >
-                        {agent.name.slice(0, 2).toUpperCase()}
+                      <div className="agent-avatar">
+                        {ag.name.slice(0, 2).toUpperCase()}
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>{agent.name}</span>
-                        {agent.id === currentUser?.id && (
-                          <span style={{ fontSize: '0.7rem', color: 'var(--primary)', fontWeight: 600 }}>
-                            (You)
-                          </span>
-                        )}
+                        <span style={{ fontWeight: 600 }}>{ag.name}</span>
+                        {ag.id === user?.id && <span className="you-tag">(You)</span>}
                       </div>
                     </div>
                   </td>
                   <td>
-                    <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
-                      {agent.email}
-                    </span>
+                    <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>{ag.email}</span>
                   </td>
                   <td>
                     <select
-                      className="form-select"
-                      style={{ padding: '4px 8px', fontSize: '0.8rem', width: '100%' }}
-                      value={agent.role}
-                      disabled={agent.id === currentUser?.id}
-                      onChange={(e) => handleChangeRole(agent, e.target.value as AgentRole)}
+                      className="form-select form-select-sm"
+                      value={ag.role}
+                      disabled={ag.id === user?.id}
+                      onChange={(e) => handleChangeRole(ag, e.target.value as AgentRole)}
                     >
                       <option value="SUPPORT">SUPPORT</option>
                       <option value="OWNER">OWNER</option>
                     </select>
                   </td>
                   <td>
-                    <span
-                      style={{
-                        display: 'inline-block',
-                        padding: '2px 8px',
-                        fontSize: '0.72rem',
-                        fontWeight: 700,
-                        borderRadius: 'var(--radius-full)',
-                        backgroundColor: agent.status === 'ACTIVE' ? '#ecfdf5' : '#f1f5f9',
-                        color: agent.status === 'ACTIVE' ? '#047857' : '#64748b',
-                      }}
-                    >
-                      {agent.status}
+                    <span className={`status-pill ${ag.status === 'ACTIVE' ? 'active-pill' : 'inactive-pill'}`}>
+                      {ag.status}
                     </span>
                   </td>
                   <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                    {formatDate(agent.createdAt)}
+                    {formatDate(ag.createdAt)}
                   </td>
                   <td>
-                    {agent.id !== currentUser?.id ? (
+                    {ag.id !== user?.id ? (
                       <button
-                        className={`btn btn-sm ${agent.status === 'ACTIVE' ? 'btn-secondary' : 'btn-primary'}`}
-                        onClick={() => handleToggleStatus(agent)}
+                        type="button"
+                        className={`btn btn-sm ${ag.status === 'ACTIVE' ? 'btn-secondary' : 'btn-primary'}`}
+                        onClick={() => handleToggleStatus(ag)}
                       >
-                        {agent.status === 'ACTIVE' ? 'Deactivate' : 'Activate'}
+                        {ag.status === 'ACTIVE' ? 'Deactivate' : 'Activate'}
                       </button>
                     ) : (
                       <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
@@ -330,8 +264,6 @@ export const Agents: React.FC = () => {
           onClick={(e) => {
             if (e.target === e.currentTarget) setShowAddModal(false);
           }}
-          onKeyDown={(e) => e.key === 'Escape' && setShowAddModal(false)}
-          tabIndex={0}
           role="dialog"
         >
           <div className="modal-content">
@@ -344,9 +276,7 @@ export const Agents: React.FC = () => {
 
             <form onSubmit={handleCreateAgent}>
               <div className="form-group">
-                <label htmlFor="agent-new-name" className="form-label">
-                  Full Name
-                </label>
+                <label htmlFor="agent-new-name" className="form-label">Full Name</label>
                 <input
                   id="agent-new-name"
                   type="text"
@@ -359,9 +289,7 @@ export const Agents: React.FC = () => {
               </div>
 
               <div className="form-group">
-                <label htmlFor="agent-new-email" className="form-label">
-                  Google Workspace / Login Email
-                </label>
+                <label htmlFor="agent-new-email" className="form-label">Google Workspace / Login Email</label>
                 <input
                   id="agent-new-email"
                   type="email"
@@ -371,33 +299,24 @@ export const Agents: React.FC = () => {
                   onChange={(e) => setNewEmail(e.target.value)}
                   required
                 />
-                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 4, display: 'block' }}>
-                  Must match their Google Sign-In identity to be authorized.
-                </span>
+                <span className="form-hint">Must match their Google Sign-In identity to be authorized.</span>
               </div>
 
               <div className="form-group">
-                <label htmlFor="agent-new-userid" className="form-label">
-                  Junto User ID (Optional UUID)
-                </label>
+                <label htmlFor="agent-new-userid" className="form-label">Junto User ID (Optional UUID)</label>
                 <input
                   id="agent-new-userid"
                   type="text"
-                  className="form-control"
-                  style={{ fontFamily: 'var(--font-mono)' }}
+                  className="form-control font-mono"
                   placeholder="e.g. user-uuid-5001"
                   value={newUserId}
                   onChange={(e) => setNewUserId(e.target.value)}
                 />
-                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 4, display: 'block' }}>
-                  Optional UUID if user already exists in PostgreSQL users table.
-                </span>
+                <span className="form-hint">Optional UUID if user already exists in PostgreSQL users table.</span>
               </div>
 
               <div className="form-group">
-                <label htmlFor="agent-new-role" className="form-label">
-                  Role
-                </label>
+                <label htmlFor="agent-new-role" className="form-label">Role</label>
                 <select
                   id="agent-new-role"
                   className="form-select"
@@ -409,7 +328,7 @@ export const Agents: React.FC = () => {
                 </select>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 24 }}>
+              <div className="modal-actions">
                 <button
                   type="button"
                   className="btn btn-secondary"

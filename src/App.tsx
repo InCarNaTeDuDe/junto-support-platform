@@ -1,26 +1,23 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from './context/AuthContext';
 import { supportService } from './services/support';
-import Sidebar from './components/Sidebar';
-import Header from './components/Header';
-import Login from './pages/Login';
-import Dashboard from './pages/Dashboard';
-import Cases from './pages/Cases';
-import CaseDetails from './pages/CaseDetails';
-import Agents from './pages/Agents';
+import { Sidebar } from './components/Sidebar';
+import { Header } from './components/Header';
+import { Login } from './pages/Login';
+import { Dashboard } from './pages/Dashboard';
+import { Cases } from './pages/Cases';
+import { CaseDetails } from './pages/CaseDetails';
+import { Agents } from './pages/Agents';
 
-export const App: React.FC = () => {
+export const AppContent: React.FC = () => {
   const { isAuthenticated, isAuthorized, isLoading: isAuthLoading, logout } = useAuth();
 
-  // Routing State
   const [currentPage, setCurrentPage] = useState<string>('dashboard');
   const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
   const [unassignedCount, setUnassignedCount] = useState<number>(0);
   const [criticalCount, setCriticalCount] = useState<number>(0);
   const [isBackendConnected, setIsBackendConnected] = useState<boolean>(true);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState<boolean>(false);
-
-  // Global search query passed from header
   const [headerSearchQuery, setHeaderSearchQuery] = useState<string>('');
 
   const refreshCounts = useCallback(async () => {
@@ -35,14 +32,15 @@ export const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (isAuthorized) {
+    if (isAuthenticated && isAuthorized) {
       refreshCounts();
     }
-  }, [isAuthorized, refreshCounts]);
+  }, [isAuthenticated, isAuthorized, refreshCounts]);
 
   const handleNavigate = (page: string) => {
     setCurrentPage(page);
     setSelectedCaseId(null);
+    setHeaderSearchQuery('');
     refreshCounts();
   };
 
@@ -69,37 +67,19 @@ export const App: React.FC = () => {
     setCurrentPage('cases_all');
   };
 
-  const handleHeaderRefresh = () => {
-    refreshCounts();
-  };
-
-  const pageHeaderTitles: Record<string, string> = {
+  const pageHeaderTitle: Record<string, string> = {
     dashboard: 'Operations Dashboard',
     cases_all: 'All Support Cases',
     cases_my: 'My Assigned Cases',
     cases_unassigned: 'Unassigned Queue',
     cases_resolved: 'Resolved Cases Archive',
-    case_details: 'Case Details',
+    case_details: selectedCaseId ? `Case Details` : 'Case Details',
     agents: 'Agent Directory & Roles',
   };
 
-  const pageHeaderTitle = pageHeaderTitles[currentPage] || 'Dashboard';
-
   if (isAuthLoading) {
     return (
-      <div
-        style={{
-          minHeight: '100vh',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: 16,
-          backgroundColor: 'var(--bg-app)',
-          color: 'var(--text-muted)',
-          fontSize: '0.9rem',
-        }}
-      >
+      <div className="app-loading-screen">
         <div className="spinner" />
         <p>Authenticating Junto Support Session...</p>
       </div>
@@ -131,12 +111,12 @@ export const App: React.FC = () => {
 
       <div className="main-wrapper">
         <Header
-          title={pageHeaderTitle}
+          title={pageHeaderTitle[currentPage] || 'Dashboard'}
           subtitle="Junto Mobile Support System"
           isBackendConnected={isBackendConnected}
           onToggleSidebar={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
           onQuickSearch={handleQuickSearch}
-          onRefresh={handleHeaderRefresh}
+          onRefresh={refreshCounts}
         />
 
         <main className="content-area">
@@ -149,6 +129,7 @@ export const App: React.FC = () => {
 
           {currentPage === 'cases_all' && (
             <Cases
+              key={`all-${headerSearchQuery}`}
               view="ALL"
               initialSearch={headerSearchQuery}
               onSelectCase={handleSelectCase}
@@ -157,21 +138,27 @@ export const App: React.FC = () => {
 
           {currentPage === 'cases_my' && (
             <Cases
+              key={`my-${headerSearchQuery}`}
               view="MY_CASES"
+              initialSearch={headerSearchQuery}
               onSelectCase={handleSelectCase}
             />
           )}
 
           {currentPage === 'cases_unassigned' && (
             <Cases
+              key={`unassigned-${headerSearchQuery}`}
               view="UNASSIGNED"
+              initialSearch={headerSearchQuery}
               onSelectCase={handleSelectCase}
             />
           )}
 
           {currentPage === 'cases_resolved' && (
             <Cases
+              key={`resolved-${headerSearchQuery}`}
               view="RESOLVED"
+              initialSearch={headerSearchQuery}
               onSelectCase={handleSelectCase}
             />
           )}
@@ -190,4 +177,4 @@ export const App: React.FC = () => {
   );
 };
 
-export default App;
+export default AppContent;

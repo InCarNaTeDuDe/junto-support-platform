@@ -12,7 +12,7 @@ interface SummaryCardProps {
 export const SummaryCard: React.FC<SummaryCardProps> = ({
   title,
   count,
-  subtitle = '',
+  subtitle,
   accentColor = 'var(--primary)',
   isActive = false,
   onClick,
@@ -20,14 +20,19 @@ export const SummaryCard: React.FC<SummaryCardProps> = ({
   return (
     <div
       className={`summary-card ${isActive ? 'active' : ''}`}
+      onClick={onClick}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onClick?.();
+        }
+      }}
       style={{
         backgroundColor: isActive ? 'var(--primary-subtle)' : 'var(--bg-surface)',
         borderColor: isActive ? 'var(--primary)' : 'var(--border-subtle)',
       }}
-      onClick={onClick}
-      onKeyDown={(e) => e.key === 'Enter' && onClick?.()}
-      role="button"
-      tabIndex={0}
     >
       <div
         className="card-indicator"
@@ -38,9 +43,14 @@ export const SummaryCard: React.FC<SummaryCardProps> = ({
           flexShrink: 0,
         }}
       />
-      <div className="card-content" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+        }}
+      >
         <div
-          className="card-title"
           style={{
             fontSize: '0.8rem',
             fontWeight: 500,
@@ -52,7 +62,6 @@ export const SummaryCard: React.FC<SummaryCardProps> = ({
           {title}
         </div>
         <div
-          className="card-count"
           style={{
             fontSize: '1.75rem',
             fontWeight: 700,
@@ -65,7 +74,6 @@ export const SummaryCard: React.FC<SummaryCardProps> = ({
         </div>
         {subtitle && (
           <div
-            className="card-subtitle"
             style={{
               fontSize: '0.75rem',
               color: 'var(--text-secondary)',

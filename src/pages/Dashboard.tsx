@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useEffect, useState } from 'react';
 import { supportService } from '../services/support';
 import type { CasesSummary, SupportCase } from '../types/support';
-import SummaryCard from '../components/SummaryCard';
-import CaseTable from '../components/CaseTable';
+import { SummaryCard } from '../components/SummaryCard';
+import { CaseTable } from '../components/CaseTable';
 
 interface DashboardProps {
   onSelectCase: (caseId: string) => void;
@@ -32,11 +32,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectCase, onNavigate }
   const [criticalCases, setCriticalCases] = useState<SupportCase[]>([]);
   const [unassignedCases, setUnassignedCases] = useState<SupportCase[]>([]);
   const [recentCases, setRecentCases] = useState<SupportCase[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [errorMsg, setErrorMsg] = useState<string>('');
+
+  const [isLoading, setIsLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState('');
   const [activeTab, setActiveTab] = useState<'CRITICAL' | 'UNASSIGNED' | 'RECENT'>('CRITICAL');
 
-  const loadDashboardData = useCallback(async () => {
+  const loadDashboardData = async () => {
     setIsLoading(true);
     setErrorMsg('');
     try {
@@ -56,11 +57,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectCase, onNavigate }
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  };
 
   useEffect(() => {
     loadDashboardData();
-  }, [loadDashboardData]);
+  }, []);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
@@ -79,7 +80,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectCase, onNavigate }
           accentColor="#64748b"
           onClick={() => onNavigate('cases_all')}
         />
-
         <SummaryCard
           title="Open Cases"
           count={summary.open}
@@ -87,7 +87,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectCase, onNavigate }
           accentColor="#2563eb"
           onClick={() => onNavigate('cases_all')}
         />
-
         <SummaryCard
           title="In Progress"
           count={summary.inProgress}
@@ -95,7 +94,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectCase, onNavigate }
           accentColor="#d97706"
           onClick={() => onNavigate('cases_all')}
         />
-
         <SummaryCard
           title="Waiting for User"
           count={summary.waitingForUser}
@@ -103,7 +101,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectCase, onNavigate }
           accentColor="#8b5cf6"
           onClick={() => onNavigate('cases_all')}
         />
-
         <SummaryCard
           title="Resolved"
           count={summary.resolved}
@@ -133,13 +130,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectCase, onNavigate }
             <line x1="12" y1="16" x2="12.01" y2="16" />
           </svg>
           <span style={{ flex: 1 }}>{errorMsg}</span>
-          <button className="btn btn-sm btn-secondary" onClick={loadDashboardData}>
+          <button type="button" className="btn btn-sm btn-secondary" onClick={loadDashboardData}>
             Retry
           </button>
         </div>
       )}
 
-      {/* Triage Focus Tabs */}
+      {/* Triage Focus Tabs Card */}
       <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
         <div
           style={{
@@ -156,7 +153,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectCase, onNavigate }
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             <button
               type="button"
-              className={`btn ${activeTab === 'CRITICAL' ? 'btn-secondary' : ''}`}
+              className={`tab-btn ${activeTab === 'CRITICAL' ? 'active' : ''}`}
+              onClick={() => setActiveTab('CRITICAL')}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -164,20 +162,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectCase, onNavigate }
                 padding: '8px 14px',
                 fontSize: '0.85rem',
                 fontWeight: activeTab === 'CRITICAL' ? 600 : 500,
-                backgroundColor: activeTab === 'CRITICAL' ? 'var(--bg-subtle)' : 'transparent',
-                borderColor: activeTab === 'CRITICAL' ? 'var(--border-subtle)' : 'transparent',
                 color: activeTab === 'CRITICAL' ? 'var(--primary)' : 'var(--text-secondary)',
+                backgroundColor: activeTab === 'CRITICAL' ? 'var(--bg-subtle)' : 'transparent',
+                border: `1px solid ${activeTab === 'CRITICAL' ? 'var(--border-subtle)' : 'transparent'}`,
+                borderRadius: 'var(--radius-md)',
+                cursor: 'pointer',
               }}
-              onClick={() => setActiveTab('CRITICAL')}
             >
-              <span
-                style={{
-                  width: 8,
-                  height: 8,
-                  borderRadius: '50%',
-                  backgroundColor: '#dc2626',
-                }}
-              />
+              <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#dc2626' }} />
               <span>Critical & High Priority</span>
               <span
                 style={{
@@ -195,7 +187,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectCase, onNavigate }
 
             <button
               type="button"
-              className={`btn ${activeTab === 'UNASSIGNED' ? 'btn-secondary' : ''}`}
+              className={`tab-btn ${activeTab === 'UNASSIGNED' ? 'active' : ''}`}
+              onClick={() => setActiveTab('UNASSIGNED')}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -203,20 +196,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectCase, onNavigate }
                 padding: '8px 14px',
                 fontSize: '0.85rem',
                 fontWeight: activeTab === 'UNASSIGNED' ? 600 : 500,
-                backgroundColor: activeTab === 'UNASSIGNED' ? 'var(--bg-subtle)' : 'transparent',
-                borderColor: activeTab === 'UNASSIGNED' ? 'var(--border-subtle)' : 'transparent',
                 color: activeTab === 'UNASSIGNED' ? 'var(--primary)' : 'var(--text-secondary)',
+                backgroundColor: activeTab === 'UNASSIGNED' ? 'var(--bg-subtle)' : 'transparent',
+                border: `1px solid ${activeTab === 'UNASSIGNED' ? 'var(--border-subtle)' : 'transparent'}`,
+                borderRadius: 'var(--radius-md)',
+                cursor: 'pointer',
               }}
-              onClick={() => setActiveTab('UNASSIGNED')}
             >
-              <span
-                style={{
-                  width: 8,
-                  height: 8,
-                  borderRadius: '50%',
-                  backgroundColor: '#d97706',
-                }}
-              />
+              <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#d97706' }} />
               <span>Awaiting Assignment</span>
               <span
                 style={{
@@ -234,7 +221,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectCase, onNavigate }
 
             <button
               type="button"
-              className={`btn ${activeTab === 'RECENT' ? 'btn-secondary' : ''}`}
+              className={`tab-btn ${activeTab === 'RECENT' ? 'active' : ''}`}
+              onClick={() => setActiveTab('RECENT')}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -242,20 +230,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectCase, onNavigate }
                 padding: '8px 14px',
                 fontSize: '0.85rem',
                 fontWeight: activeTab === 'RECENT' ? 600 : 500,
-                backgroundColor: activeTab === 'RECENT' ? 'var(--bg-subtle)' : 'transparent',
-                borderColor: activeTab === 'RECENT' ? 'var(--border-subtle)' : 'transparent',
                 color: activeTab === 'RECENT' ? 'var(--primary)' : 'var(--text-secondary)',
+                backgroundColor: activeTab === 'RECENT' ? 'var(--bg-subtle)' : 'transparent',
+                border: `1px solid ${activeTab === 'RECENT' ? 'var(--border-subtle)' : 'transparent'}`,
+                borderRadius: 'var(--radius-md)',
+                cursor: 'pointer',
               }}
-              onClick={() => setActiveTab('RECENT')}
             >
-              <span
-                style={{
-                  width: 8,
-                  height: 8,
-                  borderRadius: '50%',
-                  backgroundColor: '#2563eb',
-                }}
-              />
+              <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#2563eb' }} />
               <span>Recent Support Cases</span>
               <span
                 style={{
@@ -273,6 +255,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectCase, onNavigate }
           </div>
 
           <button
+            type="button"
             className="btn btn-secondary btn-sm"
             onClick={() => onNavigate(activeTab === 'UNASSIGNED' ? 'cases_unassigned' : 'cases_all')}
           >

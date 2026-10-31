@@ -1,7 +1,7 @@
 import React from 'react';
 import type { SupportCase } from '../types/support';
-import StatusBadge from './StatusBadge';
-import PriorityBadge from './PriorityBadge';
+import { StatusBadge } from './StatusBadge';
+import { PriorityBadge } from './PriorityBadge';
 
 interface CaseTableProps {
   cases: SupportCase[];
@@ -11,12 +11,12 @@ interface CaseTableProps {
 }
 
 export const CaseTable: React.FC<CaseTableProps> = ({
-  cases = [],
+  cases,
   isLoading = false,
   emptyMessage = 'No support cases found matching your criteria.',
   onSelect,
 }) => {
-  const formatDate = (isoString: string): string => {
+  const formatDate = (isoString?: string): string => {
     if (!isoString) return '-';
     const date = new Date(isoString);
     return date.toLocaleDateString('en-US', {
@@ -27,8 +27,9 @@ export const CaseTable: React.FC<CaseTableProps> = ({
     });
   };
 
-  const formatCategory = (cat: string): string => {
-    return cat ? cat.charAt(0) + cat.slice(1).toLowerCase() : '';
+  const formatCategory = (cat?: string): string => {
+    if (!cat) return '';
+    return cat.charAt(0) + cat.slice(1).toLowerCase();
   };
 
   return (
@@ -36,13 +37,13 @@ export const CaseTable: React.FC<CaseTableProps> = ({
       <table className="data-table">
         <thead>
           <tr>
-            <th style={{ width: 110 }}>Case #</th>
+            <th style={{ width: 120 }}>Case #</th>
             <th style={{ width: 170 }}>Customer</th>
             <th>Subject</th>
             <th style={{ width: 110 }}>Category</th>
             <th style={{ width: 100 }}>Priority</th>
             <th style={{ width: 130 }}>Status</th>
-            <th style={{ width: 150 }}>Assigned Agent</th>
+            <th style={{ width: 160 }}>Assigned Agent</th>
             <th style={{ width: 130 }}>Created</th>
           </tr>
         </thead>
@@ -60,14 +61,7 @@ export const CaseTable: React.FC<CaseTableProps> = ({
             <tr>
               <td colSpan={8}>
                 <div className="state-container">
-                  <svg
-                    width="40"
-                    height="40"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                  >
+                  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
                     <circle cx="12" cy="12" r="10" />
                     <line x1="8" y1="12" x2="16" y2="12" />
                   </svg>
@@ -146,7 +140,6 @@ export const CaseTable: React.FC<CaseTableProps> = ({
                           backgroundColor: 'var(--bg-subtle)',
                           padding: '1px 5px',
                           borderRadius: 3,
-                          display: 'inline-block',
                           alignSelf: 'flex-start',
                         }}
                         title={`Related to Junto ${c.relatedEntity.type}`}
@@ -182,7 +175,7 @@ export const CaseTable: React.FC<CaseTableProps> = ({
                       style={{
                         display: 'inline-flex',
                         alignItems: 'center',
-                        gap: 5,
+                        gap: 6,
                         fontSize: '0.8rem',
                         color: 'var(--text-secondary)',
                         backgroundColor: 'var(--bg-subtle)',

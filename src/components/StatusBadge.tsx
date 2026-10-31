@@ -5,29 +5,29 @@ interface StatusBadgeProps {
   status: CaseStatus;
 }
 
-const STATUS_LABELS: Record<string, string> = {
-  OPEN: 'Open',
-  ASSIGNED: 'Assigned',
-  IN_PROGRESS: 'In Progress',
-  WAITING_FOR_USER: 'Waiting for User',
-  RESOLVED: 'Resolved',
-  CLOSED: 'Closed',
-  'Under Review': 'Under Review',
-};
-
-const STATUS_CLASSES: Record<string, string> = {
-  OPEN: 'badge-open',
-  ASSIGNED: 'badge-assigned',
-  IN_PROGRESS: 'badge-inprogress',
-  WAITING_FOR_USER: 'badge-waiting',
-  RESOLVED: 'badge-resolved',
-  CLOSED: 'badge-closed',
-  'Under Review': 'badge-open',
-};
-
 export const StatusBadge: React.FC<StatusBadgeProps> = ({ status }) => {
-  const label = STATUS_LABELS[status] || status;
-  const badgeClass = STATUS_CLASSES[status] || 'badge-open';
+  const labelMap: Record<string, string> = {
+    OPEN: 'Open',
+    ASSIGNED: 'Assigned',
+    IN_PROGRESS: 'In Progress',
+    WAITING_FOR_USER: 'Waiting for User',
+    RESOLVED: 'Resolved',
+    CLOSED: 'Closed',
+    'Under Review': 'Under Review',
+  };
+
+  const classMap: Record<string, string> = {
+    OPEN: 'badge-open',
+    ASSIGNED: 'badge-assigned',
+    IN_PROGRESS: 'badge-inprogress',
+    WAITING_FOR_USER: 'badge-waiting',
+    RESOLVED: 'badge-resolved',
+    CLOSED: 'badge-closed',
+    'Under Review': 'badge-open',
+  };
+
+  const label = labelMap[status] || status;
+  const badgeClass = classMap[status] || 'badge-open';
 
   return (
     <span className={`badge ${badgeClass}`}>

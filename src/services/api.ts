@@ -61,7 +61,7 @@ export class ApiClient {
     return `${base}${cleanEndpoint}`;
   }
 
-  private getToken(): string | null {
+  public getToken(): string | null {
     try {
       return localStorage.getItem('junto_support_token');
     } catch {

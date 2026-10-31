@@ -1,28 +1,24 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { authService } from '../services/auth';
 import type { SupportAgent, AgentRole } from '../types/user';
 
-export interface AuthState {
+export interface AuthContextType {
   user: SupportAgent | null;
   isAuthenticated: boolean;
   isAuthorized: boolean;
   role: AgentRole | null;
   isLoading: boolean;
   error: string | null;
-}
-
-export interface AuthContextType extends AuthState {
-  loginWithGoogle: (email: string, name?: string, credential?: string) => Promise<{ success: boolean; authorized: boolean; error?: string }>;
+  initialize: () => Promise<void>;
   loginWithGoogleIdToken: (idToken: string) => Promise<{ success: boolean; authorized: boolean; error?: string }>;
   loginWithExistingToken: (token: string) => Promise<{ success: boolean; authorized: boolean; error?: string }>;
   logout: () => Promise<void>;
   clearError: () => void;
-  initialize: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<SupportAgent | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [isAuthorized, setIsAuthorized] = useState<boolean>(false);
@@ -30,7 +26,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  const initialize = useCallback(async () => {
+  const initialize = async () => {
     setIsLoading(true);
     setError(null);
     try {
@@ -48,48 +44,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  };
 
   useEffect(() => {
     initialize();
-  }, [initialize]);
-
-  const loginWithGoogle = async (email: string, name?: string, credential?: string) => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const session = await authService.loginWithGoogle({ email, name, credential });
-      setUser(session.user);
-      setIsAuthenticated(session.isAuthenticated);
-      setIsAuthorized(session.isAuthorized);
-      setRole(session.role);
-      setIsLoading(false);
-      return { success: true, authorized: session.isAuthorized };
-    } catch (err: any) {
-      const isUnauthorized = err.status === 403;
-      setUser(
-        isUnauthorized
-          ? {
-              id: 'unauth-user',
-              userId: 'user-external-999',
-              email,
-              name: name || 'User',
-              role: 'SUPPORT',
-              isActive: false,
-              status: 'INACTIVE',
-              createdAt: '',
-            }
-          : null
-      );
-      setIsAuthenticated(isUnauthorized);
-      setIsAuthorized(false);
-      setRole(null);
-      setIsLoading(false);
-      const errMsg = err.message || 'Authentication failed';
-      setError(errMsg);
-      return { success: false, authorized: false, error: errMsg };
-    }
-  };
+  }, []);
 
   const loginWithGoogleIdToken = async (idToken: string) => {
     setIsLoading(true);
@@ -103,9 +62,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsLoading(false);
       return { success: true, authorized: session.isAuthorized };
     } catch (err: any) {
-      const isUnauthorized = err.status === 403;
-      setUser(null);
-      setIsAuthenticated(isUnauthorized);
+      const isForbidden = err.status === 403;
+      setUser(isForbidden ? err.data?.data || err.data?.user || null : null);
+      setIsAuthenticated(isForbidden);
       setIsAuthorized(false);
       setRole(null);
       setIsLoading(false);
@@ -127,9 +86,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsLoading(false);
       return { success: true, authorized: session.isAuthorized };
     } catch (err: any) {
-      const isUnauthorized = err.status === 403;
       setUser(null);
-      setIsAuthenticated(isUnauthorized);
+      setIsAuthenticated(false);
       setIsAuthorized(false);
       setRole(null);
       setIsLoading(false);
@@ -153,9 +111,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const clearError = () => {
-    setError(null);
-  };
+  const clearError = () => setError(null);
 
   return (
     <AuthContext.Provider
@@ -166,12 +122,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         role,
         isLoading,
         error,
-        loginWithGoogle,
+        initialize,
         loginWithGoogleIdToken,
         loginWithExistingToken,
         logout,
         clearError,
-        initialize,
       }}
     >
       {children}

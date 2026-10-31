@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { supportService } from '../services/support';
 import { useAuth } from '../context/AuthContext';
-import type { SupportCase, CaseFilterOptions } from '../types/support';
+import type { SupportCase, CaseFilterOptions, CaseStatus, CasePriority, CaseCategory } from '../types/support';
 import type { SupportAgent } from '../types/user';
-import CaseTable from '../components/CaseTable';
+import { CaseTable } from '../components/CaseTable';
 
 interface CasesProps {
   view?: 'ALL' | 'MY_CASES' | 'UNASSIGNED' | 'RESOLVED';
@@ -11,19 +11,12 @@ interface CasesProps {
   onSelectCase: (caseId: string) => void;
 }
 
-const VIEW_TITLES: Record<string, string> = {
-  ALL: 'All Cases',
-  MY_CASES: 'My Assigned Cases',
-  UNASSIGNED: 'Unassigned Cases',
-  RESOLVED: 'Resolved Cases',
-};
-
 export const Cases: React.FC<CasesProps> = ({
   view = 'ALL',
   initialSearch = '',
   onSelectCase,
 }) => {
-  const { user: currentUser } = useAuth();
+  const { user } = useAuth();
 
   const [cases, setCases] = useState<SupportCase[]>([]);
   const [agents, setAgents] = useState<SupportAgent[]>([]);
@@ -35,41 +28,40 @@ export const Cases: React.FC<CasesProps> = ({
   const [isLoading, setIsLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
 
-  // Filters
+  // Filter states
   const [search, setSearch] = useState(initialSearch);
-  const [status, setStatus] = useState('ALL');
-  const [priority, setPriority] = useState('ALL');
-  const [category, setCategory] = useState('ALL');
-  const [assignedAgentId, setAssignedAgentId] = useState('ALL');
+  const [status, setStatus] = useState<string>('ALL');
+  const [priority, setPriority] = useState<string>('ALL');
+  const [category, setCategory] = useState<string>('ALL');
+  const [assignedAgentId, setAssignedAgentId] = useState<string>('ALL');
   const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'priority' | 'status'>('newest');
 
-  // Update search if initialSearch changes
-  useEffect(() => {
-    if (initialSearch !== undefined) {
-      setSearch(initialSearch);
-    }
-  }, [initialSearch]);
+  const viewTitles: Record<string, string> = {
+    ALL: 'All Cases',
+    MY_CASES: 'My Assigned Cases',
+    UNASSIGNED: 'Unassigned Cases',
+    RESOLVED: 'Resolved Cases',
+  };
 
-  const loadData = useCallback(async (pageToLoad = currentPage) => {
+  const loadData = useCallback(async () => {
     setIsLoading(true);
     setErrorMsg('');
 
     try {
-      let agentsList = agents;
-      if (agentsList.length === 0) {
-        agentsList = await supportService.getAgents();
-        setAgents(agentsList);
+      if (agents.length === 0) {
+        const agentList = await supportService.getAgents();
+        setAgents(agentList);
       }
 
       const filters: CaseFilterOptions = {
         view,
         search: search.trim(),
-        status: status as any,
-        priority: priority as any,
-        category: category as any,
-        assignedAgentId: view === 'MY_CASES' ? currentUser?.id : assignedAgentId,
+        status: status as CaseStatus | 'ALL',
+        priority: priority as CasePriority | 'ALL',
+        category: category as CaseCategory | 'ALL',
+        assignedAgentId: view === 'MY_CASES' ? user?.id : assignedAgentId,
         sortBy,
-        page: pageToLoad,
+        page: currentPage,
         limit: pageSize,
       };
 
@@ -83,24 +75,15 @@ export const Cases: React.FC<CasesProps> = ({
     } finally {
       setIsLoading(false);
     }
-  }, [view, search, status, priority, category, assignedAgentId, sortBy, currentPage, currentUser?.id, agents]);
+  }, [view, search, status, priority, category, assignedAgentId, sortBy, currentPage, user?.id, agents.length]);
 
   useEffect(() => {
     setCurrentPage(1);
-    loadData(1);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [view, status, priority, category, assignedAgentId, sortBy]);
+  }, [view, search, status, priority, category, assignedAgentId, sortBy]);
 
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearch(e.target.value);
-  };
-
-  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      setCurrentPage(1);
-      loadData(1);
-    }
-  };
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const resetFilters = () => {
     setSearch('');
@@ -112,10 +95,9 @@ export const Cases: React.FC<CasesProps> = ({
     setCurrentPage(1);
   };
 
-  const goToPage = (page: number) => {
-    if (page >= 1 && page <= totalPages && page !== currentPage) {
-      setCurrentPage(page);
-      loadData(page);
+  const goToPage = (p: number) => {
+    if (p >= 1 && p <= totalPages && p !== currentPage) {
+      setCurrentPage(p);
     }
   };
 
@@ -124,7 +106,7 @@ export const Cases: React.FC<CasesProps> = ({
       {/* Page Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
         <div>
-          <h2 style={{ fontSize: '1.25rem', fontWeight: 700 }}>{VIEW_TITLES[view]}</h2>
+          <h2 style={{ fontSize: '1.25rem', fontWeight: 700 }}>{viewTitles[view] || 'Support Cases'}</h2>
           <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginTop: 2 }}>
             Manage and resolve customer support tickets from the Junto mobile chat queue.
           </p>
@@ -148,29 +130,13 @@ export const Cases: React.FC<CasesProps> = ({
       <div className="card" style={{ padding: '14px 18px' }}>
         <div style={{ display: 'flex', alignItems: 'flex-end', gap: 12, flexWrap: 'wrap' }}>
           {/* Search */}
-          <div style={{ flex: 1, minWidth: 200, display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <label
-              htmlFor="filter-search"
-              style={{
-                fontSize: '0.72rem',
-                fontWeight: 600,
-                textTransform: 'uppercase',
-                letterSpacing: '0.04em',
-                color: 'var(--text-muted)',
-              }}
-            >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flex: 1, minWidth: 200 }}>
+            <label htmlFor="filter-search" style={{ fontSize: '0.72rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--text-muted)' }}>
               Search
             </label>
             <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
               <svg
-                style={{
-                  position: 'absolute',
-                  left: 10,
-                  width: 14,
-                  height: 14,
-                  color: 'var(--text-muted)',
-                  pointerEvents: 'none',
-                }}
+                style={{ position: 'absolute', left: 10, width: 14, height: 14, color: 'var(--text-muted)', pointerEvents: 'none' }}
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
@@ -184,8 +150,7 @@ export const Cases: React.FC<CasesProps> = ({
                 type="text"
                 placeholder="Search case # or customer..."
                 value={search}
-                onChange={handleSearchChange}
-                onKeyDown={handleSearchKeyDown}
+                onChange={(e) => setSearch(e.target.value)}
                 className="form-control"
                 style={{ paddingLeft: 32 }}
               />
@@ -194,17 +159,8 @@ export const Cases: React.FC<CasesProps> = ({
 
           {/* Status Filter */}
           {view !== 'RESOLVED' && (
-            <div style={{ minWidth: 130, display: 'flex', flexDirection: 'column', gap: 4 }}>
-              <label
-                htmlFor="filter-status"
-                style={{
-                  fontSize: '0.72rem',
-                  fontWeight: 600,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.04em',
-                  color: 'var(--text-muted)',
-                }}
-              >
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 130 }}>
+              <label htmlFor="filter-status" style={{ fontSize: '0.72rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--text-muted)' }}>
                 Status
               </label>
               <select
@@ -225,17 +181,8 @@ export const Cases: React.FC<CasesProps> = ({
           )}
 
           {/* Priority Filter */}
-          <div style={{ minWidth: 130, display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <label
-              htmlFor="filter-priority"
-              style={{
-                fontSize: '0.72rem',
-                fontWeight: 600,
-                textTransform: 'uppercase',
-                letterSpacing: '0.04em',
-                color: 'var(--text-muted)',
-              }}
-            >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 130 }}>
+            <label htmlFor="filter-priority" style={{ fontSize: '0.72rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--text-muted)' }}>
               Priority
             </label>
             <select
@@ -253,21 +200,12 @@ export const Cases: React.FC<CasesProps> = ({
           </div>
 
           {/* Category Filter */}
-          <div style={{ minWidth: 130, display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <label
-              htmlFor="filter-cat"
-              style={{
-                fontSize: '0.72rem',
-                fontWeight: 600,
-                textTransform: 'uppercase',
-                letterSpacing: '0.04em',
-                color: 'var(--text-muted)',
-              }}
-            >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 130 }}>
+            <label htmlFor="filter-category" style={{ fontSize: '0.72rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--text-muted)' }}>
               Category
             </label>
             <select
-              id="filter-cat"
+              id="filter-category"
               value={category}
               onChange={(e) => setCategory(e.target.value)}
               className="form-select"
@@ -285,19 +223,10 @@ export const Cases: React.FC<CasesProps> = ({
             </select>
           </div>
 
-          {/* Agent Filter (if not in MY_CASES or UNASSIGNED) */}
+          {/* Assigned Agent (for ALL and RESOLVED) */}
           {(view === 'ALL' || view === 'RESOLVED') && (
-            <div style={{ minWidth: 130, display: 'flex', flexDirection: 'column', gap: 4 }}>
-              <label
-                htmlFor="filter-agent"
-                style={{
-                  fontSize: '0.72rem',
-                  fontWeight: 600,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.04em',
-                  color: 'var(--text-muted)',
-                }}
-              >
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 140 }}>
+              <label htmlFor="filter-agent" style={{ fontSize: '0.72rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--text-muted)' }}>
                 Assigned Agent
               </label>
               <select
@@ -308,9 +237,9 @@ export const Cases: React.FC<CasesProps> = ({
               >
                 <option value="ALL">All Agents</option>
                 <option value="UNASSIGNED">Unassigned</option>
-                {agents.map((agent) => (
-                  <option key={agent.id} value={agent.id}>
-                    {agent.name}
+                {agents.map((ag) => (
+                  <option key={ag.id} value={ag.id}>
+                    {ag.name}
                   </option>
                 ))}
               </select>
@@ -318,17 +247,8 @@ export const Cases: React.FC<CasesProps> = ({
           )}
 
           {/* Sort By */}
-          <div style={{ minWidth: 130, display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <label
-              htmlFor="filter-sort"
-              style={{
-                fontSize: '0.72rem',
-                fontWeight: 600,
-                textTransform: 'uppercase',
-                letterSpacing: '0.04em',
-                color: 'var(--text-muted)',
-              }}
-            >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 130 }}>
+            <label htmlFor="filter-sort" style={{ fontSize: '0.72rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--text-muted)' }}>
               Sort
             </label>
             <select
@@ -345,12 +265,8 @@ export const Cases: React.FC<CasesProps> = ({
           </div>
 
           {/* Reset button */}
-          <div style={{ minWidth: 'auto', display: 'flex', alignItems: 'flex-end' }}>
-            <button
-              className="btn btn-secondary btn-sm"
-              onClick={resetFilters}
-              title="Reset all filters"
-            >
+          <div style={{ paddingBottom: 2 }}>
+            <button type="button" className="btn btn-secondary btn-sm" onClick={resetFilters} title="Reset all filters">
               Reset
             </button>
           </div>
@@ -372,7 +288,7 @@ export const Cases: React.FC<CasesProps> = ({
           }}
         >
           <span>{errorMsg}</span>
-          <button className="btn btn-sm btn-secondary" onClick={() => loadData()}>
+          <button type="button" className="btn btn-sm btn-secondary" onClick={loadData}>
             Retry
           </button>
         </div>
@@ -408,6 +324,7 @@ export const Cases: React.FC<CasesProps> = ({
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <button
+              type="button"
               className="btn btn-secondary btn-sm"
               disabled={currentPage <= 1 || isLoading}
               onClick={() => goToPage(currentPage - 1)}
@@ -420,6 +337,7 @@ export const Cases: React.FC<CasesProps> = ({
             </span>
 
             <button
+              type="button"
               className="btn btn-secondary btn-sm"
               disabled={currentPage >= totalPages || isLoading}
               onClick={() => goToPage(currentPage + 1)}

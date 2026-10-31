@@ -2,27 +2,27 @@ import React, { useState } from 'react';
 import { API_BASE_URL } from '../services/api';
 
 interface HeaderProps {
-  title?: string;
+  title: string;
   subtitle?: string;
   isBackendConnected?: boolean;
-  onRefresh: () => void;
-  onQuickSearch: (query: string) => void;
-  onToggleSidebar: () => void;
+  onToggleSidebar?: () => void;
+  onQuickSearch?: (query: string) => void;
+  onRefresh?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
-  title = 'Dashboard',
-  subtitle = '',
+  title,
+  subtitle = 'Junto Mobile Support System',
   isBackendConnected = true,
-  onRefresh,
-  onQuickSearch,
   onToggleSidebar,
+  onQuickSearch,
+  onRefresh,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
 
-  const handleSearchSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (searchQuery.trim()) {
+    if (searchQuery.trim() && onQuickSearch) {
       onQuickSearch(searchQuery.trim());
     }
   };
@@ -44,13 +44,13 @@ export const Header: React.FC<HeaderProps> = ({
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
-        {/* Mobile menu toggle */}
+        {/* Mobile menu hamburger toggle */}
         <button
           type="button"
-          className="btn-icon"
           onClick={onToggleSidebar}
           aria-label="Toggle navigation"
-          style={{ display: 'inline-flex' }}
+          className="btn-icon"
+          style={{ display: 'inline-flex', padding: 6 }}
         >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <line x1="3" y1="12" x2="21" y2="12" />
@@ -60,15 +60,7 @@ export const Header: React.FC<HeaderProps> = ({
         </button>
 
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, overflow: 'hidden', whiteSpace: 'nowrap' }}>
-          <h1
-            style={{
-              fontSize: '1.05rem',
-              fontWeight: 600,
-              color: 'var(--text-main)',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-            }}
-          >
+          <h1 style={{ fontSize: '1.05rem', fontWeight: 600, color: 'var(--text-main)', margin: 0 }}>
             {title}
           </h1>
           {subtitle && (
@@ -80,12 +72,12 @@ export const Header: React.FC<HeaderProps> = ({
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-        {/* API Status Badge */}
         <div
+          title={`API: ${API_BASE_URL}`}
           style={{
             display: 'inline-flex',
             alignItems: 'center',
-            gap: 5,
+            gap: 6,
             padding: '3px 8px',
             borderRadius: 'var(--radius-full)',
             backgroundColor: 'var(--bg-subtle)',
@@ -93,21 +85,19 @@ export const Header: React.FC<HeaderProps> = ({
             fontSize: '0.7rem',
             color: 'var(--text-muted)',
           }}
-          title={`API: ${API_BASE_URL}`}
         >
           <span
             style={{
-              width: 6,
-              height: 6,
+              width: 7,
+              height: 7,
               borderRadius: '50%',
               backgroundColor: isBackendConnected ? '#10b981' : '#f59e0b',
             }}
           />
-          <span>{isBackendConnected ? 'Connected' : 'Offline'}</span>
+          <span>{isBackendConnected ? 'Connected' : 'Offline Mode'}</span>
         </div>
 
-        {/* Quick Search */}
-        <form onSubmit={handleSearchSubmit} style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+        <form onSubmit={handleSubmit} style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
           <svg
             style={{
               position: 'absolute',
@@ -130,26 +120,22 @@ export const Header: React.FC<HeaderProps> = ({
             placeholder="Search case #..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
+            className="form-control"
             style={{
               padding: '4px 8px 4px 28px',
               fontSize: '0.78rem',
-              fontFamily: 'var(--font-sans)',
-              border: '1px solid var(--border-subtle)',
-              borderRadius: 'var(--radius-md)',
+              width: 160,
               backgroundColor: 'var(--bg-subtle)',
-              color: 'var(--text-main)',
-              width: 150,
-              outline: 'none',
             }}
           />
         </form>
 
-        {/* Sync Button */}
         <button
+          type="button"
           className="btn btn-secondary btn-sm"
-          style={{ padding: '4px 10px', fontSize: '0.78rem' }}
           onClick={onRefresh}
           title="Sync data"
+          style={{ padding: '4px 10px', fontSize: '0.78rem' }}
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.19" />

@@ -1,6 +1,6 @@
 import { svelte } from "@sveltejs/vite-plugin-svelte";
 import { fileURLToPath, URL } from "node:url";
-import { defineConfig, loadEnv, type Plugin } from "vite";
+import { defineConfig, type Plugin } from "vite";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -32,51 +32,30 @@ function staticSpaPlugin(): Plugin {
   };
 }
 
-export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, process.cwd(), "");
-  const googleClientId =
-    process.env.VITE_GOOGLE_CLIENT_ID || env.VITE_GOOGLE_CLIENT_ID || "";
-  const apiBaseUrl =
-    process.env.VITE_API_BASE_URL || env.VITE_API_BASE_URL || "";
-  const juntoApiBaseUrl =
-    process.env.VITE_JUNTO_API_BASE_URL || env.VITE_JUNTO_API_BASE_URL || "";
+const proxyTarget =
+  process.env.VITE_API_BASE_URL ||
+  process.env.VITE_JUNTO_API_BASE_URL ||
+  process.env.BACKEND_URL ||
+  "http://127.0.0.1:8000";
 
-  return {
-    plugins: [svelte(), staticSpaPlugin()],
-    define: {
-      "import.meta.env.VITE_GOOGLE_CLIENT_ID": JSON.stringify(googleClientId),
-      "import.meta.env.VITE_API_BASE_URL": JSON.stringify(apiBaseUrl),
-      "import.meta.env.VITE_JUNTO_API_BASE_URL":
-        JSON.stringify(juntoApiBaseUrl),
+export default defineConfig({
+  plugins: [svelte(), staticSpaPlugin()],
+  resolve: {
+    alias: {
+      "@": fileURLToPath(new URL("./src", import.meta.url)),
     },
-    resolve: {
-      alias: {
-        "@": fileURLToPath(new URL("./src", import.meta.url)),
+  },
+  server: {
+    host: "0.0.0.0",
+    port: 3000,
+    hmr: process.env.DISABLE_HMR !== "true",
+    watch: process.env.DISABLE_HMR === "true" ? null : {},
+    proxy: {
+      "/api": {
+        target: proxyTarget,
+        changeOrigin: true,
+        secure: false,
       },
     },
-    server: {
-      host: "0.0.0.0",
-      port: 3000,
-      hmr: process.env.DISABLE_HMR !== "true",
-      watch: process.env.DISABLE_HMR === "true" ? null : {},
-      proxy: {
-        "/api": {
-          target: "http://127.0.0.1:3000",
-          changeOrigin: true,
-          secure: false,
-          configure: (proxy) => {
-            proxy.on("proxyReq", (proxyReq, req) => {
-              console.log(
-                `[PROXY] ${req.url} -> ${proxyReq.getHeader("host")}${proxyReq.path}`,
-              );
-            });
-
-            proxy.on("error", (err) => {
-              console.error("[PROXY ERROR]", err);
-            });
-          },
-        },
-      },
-    },
-  };
+  },
 });

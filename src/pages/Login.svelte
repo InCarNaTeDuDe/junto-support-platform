@@ -13,21 +13,11 @@
   let googleBtnContainer: HTMLDivElement;
   let isMounted = true;
 
-  const clientId = (
-    (import.meta.env.VITE_GOOGLE_CLIENT_ID as string) ||
-    ((typeof window !== 'undefined' && (window as any).__ENV__?.VITE_GOOGLE_CLIENT_ID) as string) ||
-    ((typeof window !== 'undefined' && (window as any).VITE_GOOGLE_CLIENT_ID) as string) ||
-    ''
-  )?.trim();
+  const clientId = '310875006924-5dsprg0oqeivq38pam5glqeb9hkslf9k.apps.googleusercontent.com';
   $: authError = $auth.error;
 
   onMount(() => {
     isMounted = true;
-    if (!clientId) {
-      customError = 'VITE_GOOGLE_CLIENT_ID is not configured in environment.';
-      showManualInput = true;
-      return;
-    }
 
     const init = (retry = 0) => {
       if (!isMounted) return;

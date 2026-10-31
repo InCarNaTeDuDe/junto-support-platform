@@ -41,7 +41,7 @@ To configure environment variables, edit `.env`:
 
 ```bash
 # Google OAuth 2.0 Web Client ID
-VITE_GOOGLE_CLIENT_ID=310875006924-.apps.googleusercontent.com
+VITE_GOOGLE_CLIENT_ID=310875006924-5dsprg0oqeivq38pam5glqeb9hkslf9k.apps.googleusercontent.com
 
 # Backend API URL (defaults to /api)
 VITE_API_BASE_URL=

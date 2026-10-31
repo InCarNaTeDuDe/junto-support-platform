@@ -9,11 +9,74 @@ import { Cases } from './pages/Cases';
 import { CaseDetails } from './pages/CaseDetails';
 import { Agents } from './pages/Agents';
 
+// Helper to parse path into page and caseId
+function parseRouteFromPath(path: string): { page: string; caseId: string | null } {
+  const cleanPath = path.split('?')[0].split('#')[0].replace(/\/+$/, '') || '/';
+
+  if (cleanPath === '' || cleanPath === '/' || cleanPath === '/dashboard') {
+    return { page: 'dashboard', caseId: null };
+  }
+  if (cleanPath === '/cases' || cleanPath === '/cases/all') {
+    return { page: 'cases_all', caseId: null };
+  }
+  if (cleanPath === '/cases/my') {
+    return { page: 'cases_my', caseId: null };
+  }
+  if (cleanPath === '/cases/unassigned') {
+    return { page: 'cases_unassigned', caseId: null };
+  }
+  if (cleanPath === '/cases/resolved') {
+    return { page: 'cases_resolved', caseId: null };
+  }
+  if (cleanPath.startsWith('/cases/')) {
+    const caseId = cleanPath.slice('/cases/'.length);
+    if (caseId) {
+      return { page: 'case_details', caseId: decodeURIComponent(caseId) };
+    }
+  }
+  if (cleanPath === '/agents') {
+    return { page: 'agents', caseId: null };
+  }
+  if (cleanPath === '/login') {
+    return { page: 'login', caseId: null };
+  }
+
+  return { page: 'dashboard', caseId: null };
+}
+
+function getPathForRoute(page: string, caseId: string | null): string {
+  switch (page) {
+    case 'dashboard':
+      return '/dashboard';
+    case 'cases_all':
+      return '/cases';
+    case 'cases_my':
+      return '/cases/my';
+    case 'cases_unassigned':
+      return '/cases/unassigned';
+    case 'cases_resolved':
+      return '/cases/resolved';
+    case 'case_details':
+      return caseId ? `/cases/${encodeURIComponent(caseId)}` : '/cases';
+    case 'agents':
+      return '/agents';
+    case 'login':
+      return '/login';
+    default:
+      return '/dashboard';
+  }
+}
+
 export const AppContent: React.FC = () => {
   const { isAuthenticated, isAuthorized, isLoading: isAuthLoading, logout } = useAuth();
 
-  const [currentPage, setCurrentPage] = useState<string>('dashboard');
-  const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState<string>(() => {
+    return parseRouteFromPath(window.location.pathname).page;
+  });
+  const [selectedCaseId, setSelectedCaseId] = useState<string | null>(() => {
+    return parseRouteFromPath(window.location.pathname).caseId;
+  });
+
   const [unassignedCount, setUnassignedCount] = useState<number>(0);
   const [criticalCount, setCriticalCount] = useState<number>(0);
   const [isBackendConnected, setIsBackendConnected] = useState<boolean>(true);
@@ -31,40 +94,69 @@ export const AppContent: React.FC = () => {
     }
   }, []);
 
+  // Listen for browser Back/Forward navigation
+  useEffect(() => {
+    const handlePopState = () => {
+      const { page, caseId } = parseRouteFromPath(window.location.pathname);
+      setCurrentPage(page);
+      setSelectedCaseId(caseId);
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, []);
+
+  // Sync route and refresh counts on auth state change
   useEffect(() => {
     if (isAuthenticated && isAuthorized) {
       refreshCounts();
+      // If currently on login route, replace with /dashboard
+      if (window.location.pathname === '/login' || window.location.pathname === '/') {
+        window.history.replaceState({}, '', '/dashboard');
+        setCurrentPage('dashboard');
+      }
+    } else if (!isAuthLoading && (!isAuthenticated || !isAuthorized)) {
+      if (window.location.pathname !== '/login') {
+        window.history.replaceState({}, '', '/login');
+      }
     }
-  }, [isAuthenticated, isAuthorized, refreshCounts]);
+  }, [isAuthenticated, isAuthorized, isAuthLoading, refreshCounts]);
 
-  const handleNavigate = (page: string) => {
+  const navigateTo = (page: string, caseId: string | null = null) => {
+    const targetPath = getPathForRoute(page, caseId);
+    if (window.location.pathname !== targetPath) {
+      window.history.pushState({}, '', targetPath);
+    }
     setCurrentPage(page);
-    setSelectedCaseId(null);
+    setSelectedCaseId(caseId);
     setHeaderSearchQuery('');
     refreshCounts();
   };
 
+  const handleNavigate = (page: string) => {
+    navigateTo(page, null);
+  };
+
   const handleSelectCase = (caseId: string) => {
-    setSelectedCaseId(caseId);
-    setCurrentPage('case_details');
+    navigateTo('case_details', caseId);
   };
 
   const handleBackToCases = () => {
-    setSelectedCaseId(null);
-    setCurrentPage('cases_all');
-    refreshCounts();
+    navigateTo('cases_all', null);
   };
 
   const handleLogout = async () => {
     await logout();
-    setCurrentPage('dashboard');
+    window.history.pushState({}, '', '/login');
+    setCurrentPage('login');
     setSelectedCaseId(null);
   };
 
   const handleQuickSearch = (query: string) => {
     setHeaderSearchQuery(query);
-    setSelectedCaseId(null);
-    setCurrentPage('cases_all');
+    navigateTo('cases_all', null);
   };
 
   const pageHeaderTitle: Record<string, string> = {
@@ -91,7 +183,7 @@ export const AppContent: React.FC = () => {
       <Login
         onLoginSuccess={() => {
           refreshCounts();
-          setCurrentPage('dashboard');
+          navigateTo('dashboard', null);
         }}
       />
     );

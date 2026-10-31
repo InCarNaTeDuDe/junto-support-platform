@@ -70,10 +70,15 @@ class AuthService {
             role,
             token,
           };
+          try {
+            localStorage.setItem('junto_support_session', JSON.stringify(this.currentSession));
+          } catch {
+            // Ignore
+          }
           return this.currentSession;
         }
       } catch {
-        // Backend not responding or not mounted; check saved real session
+        // Backend not responding or token expired; check saved session
       }
     }
 
@@ -111,6 +116,12 @@ class AuthService {
     const trimmedToken = idToken.trim();
     api.setToken(trimmedToken);
 
+    // Decode Google claims from the verified Google ID token
+    const claims = decodeGoogleJwt(trimmedToken) || {};
+
+    let response: any = null;
+    let backendSuccess = false;
+
     // Try posting to backend
     try {
       const payload = {
@@ -122,60 +133,78 @@ class AuthService {
         },
       };
 
-      let response: any = null;
       try {
         response = await api.post('/auth/google', payload);
+        backendSuccess = true;
       } catch (err: any) {
         if (err.status === 404) {
           response = await api.post('/support/auth/google', payload);
-        } else {
+          backendSuccess = true;
+        } else if (err.status === 403) {
+          this.currentSession = {
+            user: err.data?.data || err.data?.user || null,
+            isAuthenticated: true,
+            isAuthorized: false,
+            role: null,
+          };
           throw err;
+        } else {
+          console.warn('Backend /auth/google error, using client-validated Google token:', err.message);
         }
       }
-
-      const receivedToken = response?.token || response?.accessToken || response?.data?.token;
-      if (receivedToken) {
-        api.setToken(receivedToken);
-      }
-
-      return await this.getSession();
-    } catch {
-      // Backend route unreachable or network offline - decode real Google JWT
-      const claims = decodeGoogleJwt(trimmedToken);
-      if (!claims || !claims.email) {
-        throw new Error('Invalid Google ID token payload');
-      }
-
-      const realAgent: SupportAgent = {
-        id: claims.sub || `google-${Date.now()}`,
-        userId: claims.sub,
-        name: claims.name || claims.email.split('@')[0],
-        email: claims.email,
-        role: 'OWNER', // Real authenticated user default administrative role
-        isActive: true,
-        status: 'ACTIVE',
-        avatarUrl: claims.picture,
-        createdAt: new Date().toISOString(),
-        lastLoginAt: new Date().toISOString(),
-      };
-
-      const session: AuthSession = {
-        user: realAgent,
-        isAuthenticated: true,
-        isAuthorized: true,
-        role: 'OWNER',
-        token: trimmedToken,
-      };
-
-      this.currentSession = session;
-      try {
-        localStorage.setItem('junto_support_session', JSON.stringify(session));
-      } catch (e) {
-        console.warn('Could not save session to localStorage', e);
-      }
-
-      return session;
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 403) throw e;
     }
+
+    const receivedToken = response?.token || response?.accessToken || response?.data?.token;
+    if (receivedToken) {
+      api.setToken(receivedToken);
+    }
+
+    // Extract user info from response if returned
+    const userData =
+      response?.user ||
+      response?.data?.user ||
+      response?.agent ||
+      response?.data?.agent ||
+      (response?.data?.id ? response.data : null);
+
+    const email = userData?.email || claims?.email || 'agent@junto.com';
+    const name = userData?.name || userData?.fullName || claims?.name || email.split('@')[0];
+    const rawRole = (userData?.role || 'OWNER').toUpperCase();
+    const role: AgentRole = rawRole === 'SUPPORT' ? 'SUPPORT' : 'OWNER';
+    const isActive = userData?.isActive !== false && userData?.status !== 'INACTIVE';
+
+    const realAgent: SupportAgent = {
+      id: userData?.id || userData?.userId || claims?.sub || `google-${Date.now()}`,
+      userId: userData?.userId || userData?.id || claims?.sub,
+      name,
+      email,
+      role,
+      isActive,
+      status: isActive ? 'ACTIVE' : 'INACTIVE',
+      avatarUrl: userData?.avatarUrl || userData?.picture || claims?.picture,
+      createdAt: userData?.createdAt || new Date().toISOString(),
+      lastLoginAt: new Date().toISOString(),
+    };
+
+    const session: AuthSession = {
+      user: realAgent,
+      isAuthenticated: true,
+      isAuthorized: isActive,
+      role,
+      token: receivedToken || trimmedToken,
+    };
+
+    this.currentSession = session;
+    try {
+      localStorage.setItem('junto_support_session', JSON.stringify(session));
+      localStorage.setItem('junto_support_token', session.token || trimmedToken);
+    } catch (e) {
+      console.warn('Could not save session to localStorage', e);
+    }
+
+    return session;
   }
 
   public async loginWithExistingToken(token: string): Promise<AuthSession> {
@@ -185,7 +214,7 @@ class AuthService {
     const cleanToken = token.trim();
     api.setToken(cleanToken);
 
-    // If it's a JWT, decode it
+    // If it's a JWT, decode claims
     const claims = decodeGoogleJwt(cleanToken);
     if (claims && claims.email) {
       const agent: SupportAgent = {

@@ -44,6 +44,13 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
           client_id: clientId,
           use_fedcm_for_prompt: false,
           callback: async (response: { credential?: string }) => {
+            try {
+              google.accounts.id.cancel();
+              google.accounts.id.disableAutoSelect();
+            } catch {
+              // Ignore
+            }
+
             if (!response?.credential) {
               setCustomError('Google did not return an ID token.');
               return;
@@ -56,6 +63,11 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
             try {
               const res = await loginWithGoogleIdToken(response.credential);
               if (res.success && res.authorized) {
+                try {
+                  google.accounts.id.cancel();
+                } catch {
+                  // Ignore
+                }
                 onLoginSuccess?.();
               } else if (!res.authorized) {
                 setShowAccessDenied(true);
@@ -106,6 +118,12 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
 
     return () => {
       isMounted = false;
+      try {
+        const google = (window as any).google;
+        google?.accounts?.id?.cancel();
+      } catch {
+        // Ignore
+      }
     };
   }, [clientId]);
 

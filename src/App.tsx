@@ -22,6 +22,30 @@ function parseRoute(path: string): { page: string; caseId: string | null } {
   return { page: 'dashboard', caseId: null };
 }
 
+function resolveCurrentLocation(): { page: string; caseId: string | null; cleanUrl?: string } {
+  if (typeof window === 'undefined') return { page: 'dashboard', caseId: null };
+
+  // 1. Check if 404 fallback redirected with ?p=... or ?redirect=...
+  const params = new URLSearchParams(window.location.search);
+  const redirected = params.get('p') || params.get('redirect');
+  if (redirected) {
+    const decoded = decodeURIComponent(redirected);
+    return { ...parseRoute(decoded), cleanUrl: decoded };
+  }
+
+  // 2. Check hash route fallback (#/cases/my, #dashboard)
+  const hash = window.location.hash;
+  if (hash && hash.startsWith('#')) {
+    const cleanHash = hash.replace(/^#\/?/, '/');
+    if (cleanHash && cleanHash !== '/') {
+      return { ...parseRoute(cleanHash), cleanUrl: cleanHash };
+    }
+  }
+
+  // 3. Standard pathname
+  return parseRoute(window.location.pathname);
+}
+
 function getPath(page: string, caseId: string | null): string {
   const routes: Record<string, string> = {
     dashboard: '/dashboard',
@@ -38,8 +62,8 @@ function getPath(page: string, caseId: string | null): string {
 
 export const AppContent: React.FC = () => {
   const { isAuthenticated, isAuthorized, isLoading: isAuthLoading, logout } = useAuth();
-  const [currentPage, setCurrentPage] = useState(() => parseRoute(window.location.pathname).page);
-  const [selectedCaseId, setSelectedCaseId] = useState<string | null>(() => parseRoute(window.location.pathname).caseId);
+  const [currentPage, setCurrentPage] = useState(() => resolveCurrentLocation().page);
+  const [selectedCaseId, setSelectedCaseId] = useState<string | null>(() => resolveCurrentLocation().caseId);
   const [unassignedCount, setUnassignedCount] = useState(0);
   const [criticalCount, setCriticalCount] = useState(0);
   const [isBackendConnected, setIsBackendConnected] = useState(true);
@@ -58,21 +82,34 @@ export const AppContent: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    const handlePop = () => {
-      const route = parseRoute(window.location.pathname);
+    const initial = resolveCurrentLocation();
+    if (initial.cleanUrl && window.history.replaceState) {
+      window.history.replaceState({}, '', initial.cleanUrl);
+    }
+
+    const handleLocationChange = () => {
+      const route = resolveCurrentLocation();
       setCurrentPage(route.page);
       setSelectedCaseId(route.caseId);
     };
-    window.addEventListener('popstate', handlePop);
-    return () => window.removeEventListener('popstate', handlePop);
+
+    window.addEventListener('popstate', handleLocationChange);
+    window.addEventListener('hashchange', handleLocationChange);
+    return () => {
+      window.removeEventListener('popstate', handleLocationChange);
+      window.removeEventListener('hashchange', handleLocationChange);
+    };
   }, []);
 
   useEffect(() => {
     if (isAuthenticated && isAuthorized) {
       refreshCounts();
+      const current = resolveCurrentLocation();
       if (window.location.pathname === '/login' || window.location.pathname === '/') {
-        window.history.replaceState({}, '', '/dashboard');
-        setCurrentPage('dashboard');
+        if (!current.cleanUrl || current.page === 'login') {
+          window.history.replaceState({}, '', '/dashboard');
+          setCurrentPage('dashboard');
+        }
       }
     } else if (!isAuthLoading && (!isAuthenticated || !isAuthorized)) {
       if (window.location.pathname !== '/login') window.history.replaceState({}, '', '/login');

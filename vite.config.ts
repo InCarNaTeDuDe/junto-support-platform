@@ -1,9 +1,39 @@
 import react from "@vitejs/plugin-react";
 import { fileURLToPath, URL } from "node:url";
-import { defineConfig } from "vite";
+import { defineConfig, type Plugin } from "vite";
+import fs from "node:fs";
+import path from "node:path";
+
+function staticSpaPlugin(): Plugin {
+  return {
+    name: "static-spa-routes",
+    closeBundle() {
+      const distDir = path.resolve(process.cwd(), "dist");
+      const indexPath = path.join(distDir, "index.html");
+      if (!fs.existsSync(indexPath)) return;
+
+      const html = fs.readFileSync(indexPath, "utf-8");
+      const routes = [
+        "dashboard",
+        "cases",
+        "cases/my",
+        "cases/unassigned",
+        "cases/resolved",
+        "agents",
+        "login",
+      ];
+
+      for (const route of routes) {
+        const routeDir = path.join(distDir, route);
+        fs.mkdirSync(routeDir, { recursive: true });
+        fs.writeFileSync(path.join(routeDir, "index.html"), html, "utf-8");
+      }
+    },
+  };
+}
 
 export default defineConfig(() => ({
-  plugins: [react()],
+  plugins: [react(), staticSpaPlugin()],
   resolve: {
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url)),

@@ -6,120 +6,80 @@ This internal dashboard is designed for Junto's **OWNER** and **SUPPORT** agents
 
 ---
 
-## Key Features
+## 1. REST API Contract & Integration
 
-1. **Google Login & Role Authorization**:
-   - Authenticates using Google Sign-In with backend verification.
-   - Backend checks whether the authenticated user exists in `support_agents` and has `ACTIVE` status.
-   - Role enforcement (`OWNER` vs `SUPPORT`): Non-authorized accounts immediately see the dedicated **Access Denied** screen.
-   - Supports secure `credentials: 'include'` for HttpOnly session cookies and Bearer tokens.
+The dashboard connects to the existing Junto backend REST services at base path `/api/support` (configurable via `VITE_API_BASE_URL`):
 
-2. **Dashboard Overview**:
-   - Real-time summary cards: _Total Cases_, _Open Cases_, _In Progress_, _Waiting for User_, _Resolved_.
-   - Filtered triage tabs: Critical & High Priority cases, Cases awaiting agent assignment, and Recent support activity.
+### Authentication & Agent Authorization
 
-3. **Case Management**:
-   - Comprehensive columns: Case Number, Customer (with Junto rating & phone), Subject, Category, Priority, Status, Assigned Agent, and Created Date.
-   - Search by case number or customer.
-   - Instant filtering by Status, Priority, Category, and Assigned Agent.
-   - Sorting by newest, oldest, priority, and status.
-   - Built-in pagination.
+- **`GET /api/auth/me`**:
+  Retrieves the authenticated agent identity (`id`, `userId`, `name`, `email`, `role`, `isActive`).
+  Enforces role validation: Non-support users (e.g. `role: USER`) or inactive agents immediately receive the **Access Denied** screen.
+  Returns **HTTP 401** if session expired or unauthenticated.
+- **`POST /api/auth/google`**:
+  Google OAuth token exchange with active agent validation. Body strictly conforms to `GoogleWebLoginSchema`:
+  `{ "idToken": string, "platform": "WEB", "deviceInfo": { "platform": "WEB", "userAgent": string } }`
+- **`POST /api/auth/logout`**:
+  Clears session and auth cookies.
 
-4. **Case Details & Conversation Panel**:
-   - Full case information: Issue type, description, customer contact, and related Junto entities (Trip, Order, Transaction).
-   - Chronological message thread: Customer messages, Agent replies, and System events.
-   - **Internal Notes**: Distinct amber styling with private agent-only visibility warnings.
-   - Live workflow updates: Change case status, adjust priority, or reassign to an agent on the fly.
+### Dashboard Operations
 
-5. **Agent Management (OWNER Only)**:
-   - View all registered support agents, their roles, and status.
-   - Add new authorized Google accounts to the `support_agents` registry.
-   - Change agent role (`OWNER` / `SUPPORT`).
-   - Activate or deactivate agents.
-   - Strict client- and backend-level permission guard prohibiting `SUPPORT` role access.
+- **`GET /api/support/dashboard/summary`**:
+  Fetches live metrics: `totalCases`, `openCases`, `assignedCases`, `inProgressCases`, `waitingForUserCases`, `resolvedCases`, `unassignedCases`, `criticalCases`, `highPriorityCases`.
+- **`GET /api/support/dashboard/recent-cases?limit=10`**:
+  Fetches recent customer support cases for immediate triage.
 
-6. **Pure CSS Design System**:
-   - 100% handcrafted pure CSS in `src/styles/global.css`.
-   - Zero external CSS libraries or frameworks.
-   - Modern, minimal SaaS appearance with clean typography, rounded cards, and readable contrast.
+### Case Management
 
----
+- **`GET /api/support/cases`**:
+  Filtered, sorted, and paginated cases list with query parameters:
+  - `page` (1-indexed)
+  - `limit` (page size)
+  - `status` (`OPEN`, `ASSIGNED`, `IN_PROGRESS`, `WAITING_FOR_USER`, `RESOLVED`, `CLOSED`)
+  - `priority` (`CRITICAL`, `HIGH`, `MEDIUM`, `LOW`)
+  - `category` (`RIDES`, `DAYMATES`, `SERVICES`, `TICKETS`, `DEALS`, `HELPME`, `SAFETY`, `PAYMENT`, `ACCOUNT`, `GENERAL`)
+  - `assignedTo` (Agent UUID or `unassigned`)
+  - `search` (Matches case number, customer name, email, or subject)
+- **`GET /api/support/cases/:caseId`**:
+  Detailed case record including customer info, description, related Junto entity (Ride, Activity, Ticket, Service), and status.
+- **`PATCH /api/support/cases/:caseId/assign`**:
+  Body: `{ "agentId": "agent-uuid" | null }`. Assigns or unassigns case.
+- **`PATCH /api/support/cases/:caseId/status`**:
+  Body: `{ "status": "IN_PROGRESS" }`. Updates case status.
+- **`PATCH /api/support/cases/:caseId/priority`**:
+  Body: `{ "priority": "CRITICAL" }`. Updates priority.
 
-## Technology Stack
+### Case Conversation Thread
 
-- **Framework**: Svelte 5 (with native runes & components)
-- **Bundler**: Vite
-- **Language**: TypeScript
-- **Styling**: Pure CSS (Custom variables, responsive flexbox/grid, accessible controls)
-- **HTTP Client**: Centralized, strongly typed Fetch API client (`src/services/api.ts`)
+- **`GET /api/support/cases/:caseId/messages`**:
+  Fetches chronological case conversation. Internal notes are only visible to authorized agents.
+- **`POST /api/support/cases/:caseId/messages`**:
+  - Customer-visible reply: `{ "message": "...", "isInternalNote": false }`
+  - Internal agent note: `{ "message": "...", "isInternalNote": true }`
 
----
+### Support Agent Management (OWNER Only)
 
-## Project Structure
-
-```
-src/
-├── components/
-│   ├── CaseTable.svelte          # Responsive table listing cases
-│   ├── ConversationPanel.svelte  # Message thread with Reply & Internal Note tabs
-│   ├── Header.svelte             # Top navigation with live API sync and search
-│   ├── PriorityBadge.svelte      # Pure CSS priority chip
-│   ├── Sidebar.svelte            # Compact navigation & agent status
-│   ├── StatusBadge.svelte        # Pure CSS status badge
-│   └── SummaryCard.svelte        # Dashboard metric metric card
-├── pages/
-│   ├── Agents.svelte             # Agent directory & permissions (OWNER only)
-│   ├── CaseDetails.svelte        # Full case view, timeline & actions
-│   ├── Cases.svelte              # Case listing with search, filters & pagination
-│   ├── Dashboard.svelte          # Overview metrics & quick triage tabs
-│   └── Login.svelte              # Google login & access denied screens
-├── services/
-│   ├── api.ts                    # Centralized HTTP client (cookies, Bearer, error handling)
-│   ├── auth.ts                   # Google authentication & session checking
-│   └── support.ts                # Cases & agent management API service
-├── stores/
-│   └── auth.ts                   # Svelte reactive authentication store
-├── styles/
-│   └── global.css                # Pure CSS design system
-├── types/
-│   ├── support.ts                # Case, Customer, Message, and Category types
-│   └── user.ts                   # SupportAgent, AgentRole, and AuthSession types
-├── App.svelte                    # Root application component & routing
-├── main.ts                       # Svelte 5 application entry point
-└── vite-env.d.ts                 # TypeScript ambient environment types
-```
+- **`GET /api/support/agents`**:
+  Lists all authorized agents. Prohibited for `SUPPORT` role.
+- **`POST /api/support/agents`**:
+  Body: `{ "userId": "user-uuid", "role": "SUPPORT" }` (or `{ email, name, role }`). Authorizes a user as an agent.
+- **`PATCH /api/support/agents/:agentId`**:
+  Body: `{ "role": "OWNER" | "SUPPORT", "isActive": boolean }`. Updates role or activates/deactivates agent.
 
 ---
 
-## Backend API Endpoints Expected
+## 2. Backend Interoperability & Normalization
 
-The application connects to the existing Junto backend REST service via `VITE_JUNTO_API_BASE_URL`:
+The frontend service (`src/services/support.ts` & `src/services/api.ts`) is designed to handle both:
 
-- **Authentication**:
-  - `GET /support/auth/session`: Verifies current session cookie/token and checks `support_agents`.
-  - `POST /support/auth/google`: Exchanges Google OAuth payload and checks active agent status.
-  - `POST /support/auth/logout`: Clears session.
+1. The **Support Management Contract** (`{ success: true, data: ..., pagination: ... }`)
+2. The **Mobile App Router Responses** (`{ success: true, cases: [...] }`, `{ success: true, case: ... }`, `{ success: true, messages: [...] }`)
 
-- **Cases**:
-  - `GET /support/cases/summary`: Returns summary metrics (`total`, `open`, `inProgress`, etc.).
-  - `GET /support/cases`: Filtered, sorted, and paginated cases list.
-  - `GET /support/cases/:id`: Detailed case info and message thread.
-  - `PATCH /support/cases/:id/status`: Updates case status (`OPEN`, `IN_PROGRESS`, `WAITING_FOR_USER`, `RESOLVED`, `CLOSED`).
-  - `PATCH /support/cases/:id/priority`: Updates priority (`LOW`, `MEDIUM`, `HIGH`, `CRITICAL`).
-  - `PATCH /support/cases/:id/assign`: Reassigns case to an agent.
-  - `POST /support/cases/:id/messages`: Dispatches customer reply or internal note.
-
-- **Agent Management (`OWNER` only)**:
-  - `GET /support/agents`: Lists authorized agents.
-  - `POST /support/agents`: Adds an authorized agent by email.
-  - `PATCH /support/agents/:id/role`: Changes role (`OWNER` / `SUPPORT`).
-  - `PATCH /support/agents/:id/status`: Updates status (`ACTIVE` / `INACTIVE`).
-
-_Note_: If the remote backend is unreachable during local evaluation or preview, the service automatically falls back to an in-browser persistent data cache, allowing all features to be fully explored and verified without disruption.
+If any endpoint is offline or returns an unexpected error during local development, the service gracefully surfaces clear diagnostics while preserving interactive testing through the persistent in-browser cache.
 
 ---
 
-## Quickstart & Run Instructions
+## 3. Quickstart & Run Instructions
 
 1. **Install Dependencies**:
 
@@ -128,10 +88,10 @@ _Note_: If the remote backend is unreachable during local evaluation or preview,
    ```
 
 2. **Configure Environment**:
-   Copy `.env.example` to `.env.local` and set your Junto backend URL:
+   Copy `.env.example` to `.env.local` and set your backend API URL:
 
    ```bash
-   VITE_JUNTO_API_BASE_URL="https://your-junto-backend.com/api"
+   VITE_API_BASE_URL="http://localhost:3000/api"
    ```
 
 3. **Start Development Server**:
@@ -140,17 +100,23 @@ _Note_: If the remote backend is unreachable during local evaluation or preview,
    npm run dev
    ```
 
-   Open `http://localhost:5001` in your browser.
+   Open `http://localhost:3000` in your browser.
 
 4. **Build for Production**:
+
    ```bash
    npm run build
    ```
 
+5. **Typecheck & Lint**:
+   ```bash
+   npm run lint
+   ```
+
 ---
 
-## Test Accounts (For Local Evaluation)
+## 4. Test Accounts (For Local Evaluation)
 
-- **Owner**: `sarah.owner@junto.com` (Full access including Agents tab)
-- **Support**: `marcus.support@junto.com` (Support agent access)
-- **Unauthorized**: `external.guest@gmail.com` (Demonstrates the Access Denied screen)
+- **Owner**: `sarah.owner@junto.com` (Full access including Agent Directory)
+- **Support**: `marcus.support@junto.com` (Case management access; Agent Directory restricted)
+- **Unauthorized**: `external.guest@gmail.com` (Triggers HTTP 403 Access Denied screen)

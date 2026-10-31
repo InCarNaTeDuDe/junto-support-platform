@@ -160,6 +160,7 @@
             on:change={(e) => handleStatusChange(e.currentTarget.value as CaseStatus)}
           >
             <option value="OPEN">Open</option>
+            <option value="ASSIGNED">Assigned</option>
             <option value="IN_PROGRESS">In Progress</option>
             <option value="WAITING_FOR_USER">Waiting for User</option>
             <option value="RESOLVED">Resolved</option>

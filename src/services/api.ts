@@ -1,27 +1,35 @@
 /**
- * Centralized API service for Junto Support Management Dashboard.
- * Configured via VITE_JUNTO_API_BASE_URL or VITE_API_URL.
+ * Centralized API client for Junto Support Management Dashboard.
+ * Configured via VITE_API_BASE_URL or VITE_JUNTO_API_BASE_URL (defaults to /api).
  * Supports HttpOnly session cookies (credentials: 'include') and Bearer auth headers.
  */
 
 export class ApiError extends Error {
   status: number;
   data: any;
+  isSessionExpired: boolean;
+  isAccessDenied: boolean;
+  isNotFound: boolean;
+  isServerError: boolean;
 
   constructor(status: number, message: string, data?: any) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
     this.data = data;
+    this.isSessionExpired = status === 401;
+    this.isAccessDenied = status === 403;
+    this.isNotFound = status === 404;
+    this.isServerError = status >= 500;
   }
 }
 
 export const API_BASE_URL =
+  (import.meta.env.VITE_API_BASE_URL as string) ||
   (import.meta.env.VITE_JUNTO_API_BASE_URL as string) ||
-  (import.meta.env.VITE_API_URL as string) ||
   '/api';
 
-class ApiClient {
+export class ApiClient {
   private baseUrl: string;
 
   constructor(baseUrl: string) {
@@ -30,6 +38,27 @@ class ApiClient {
 
   public getBaseUrl(): string {
     return this.baseUrl;
+  }
+
+  public buildUrl(endpoint: string): string {
+    if (endpoint.startsWith('http://') || endpoint.startsWith('https://')) {
+      return endpoint;
+    }
+
+    const base = this.baseUrl.endsWith('/') ? this.baseUrl.slice(0, -1) : this.baseUrl;
+    const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+
+    // Prevent duplicate /api if baseUrl already has /api
+    if (base.endsWith('/api') && cleanEndpoint.startsWith('/api/')) {
+      return `${base}${cleanEndpoint.slice(4)}`;
+    }
+
+    // Prevent duplicate /support if baseUrl already ends in /support
+    if (base.endsWith('/support') && cleanEndpoint.startsWith('/support/')) {
+      return `${base}${cleanEndpoint.slice(8)}`;
+    }
+
+    return `${base}${cleanEndpoint}`;
   }
 
   private getToken(): string | null {
@@ -53,9 +82,7 @@ class ApiClient {
   }
 
   public async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-    const url = endpoint.startsWith('http')
-      ? endpoint
-      : `${this.baseUrl}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
+    const url = this.buildUrl(endpoint);
 
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
@@ -71,7 +98,7 @@ class ApiClient {
     const config: RequestInit = {
       ...options,
       headers,
-      credentials: 'include', // Ensure HttpOnly session cookies are transmitted
+      credentials: 'include', // Transmit HttpOnly session cookies
     };
 
     try {
@@ -91,7 +118,7 @@ class ApiClient {
 
       if (!response.ok) {
         const errorMessage =
-          (responseData && typeof responseData === 'object' && responseData.message) ||
+          (responseData && typeof responseData === 'object' && (responseData.error || responseData.message)) ||
           response.statusText ||
           `Request failed with status ${response.status}`;
 
@@ -104,8 +131,8 @@ class ApiClient {
         throw error;
       }
 
-      // Network error or fetch abort
-      throw new ApiError(0, (error as Error).message || 'Network error occurred');
+      // Network error, fetch abort or offline
+      throw new ApiError(0, (error as Error).message || 'Network error occurred. Check backend connection.');
     }
   }
 
@@ -114,7 +141,7 @@ class ApiClient {
     if (params) {
       const queryParams = new URLSearchParams();
       Object.entries(params).forEach(([key, value]) => {
-        if (value !== undefined && value !== null && value !== '') {
+        if (value !== undefined && value !== null && value !== '' && value !== 'ALL') {
           queryParams.append(key, String(value));
         }
       });

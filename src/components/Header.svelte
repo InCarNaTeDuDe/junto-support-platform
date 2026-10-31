@@ -9,6 +9,7 @@
   const dispatch = createEventDispatcher<{
     refresh: void;
     quickSearch: string;
+    toggleSidebar: void;
   }>();
 
   let searchQuery = '';
@@ -18,32 +19,38 @@
       dispatch('quickSearch', searchQuery.trim());
     }
   }
-
-  function handleRefresh() {
-    dispatch('refresh');
-  }
 </script>
 
 <header class="top-header">
   <div class="header-left">
+    <!-- Hamburger button visible on mobile/tablet -->
+    <button
+      type="button"
+      class="menu-toggle-btn"
+      aria-label="Toggle navigation"
+      on:click={() => dispatch('toggleSidebar')}
+    >
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="3" y1="12" x2="21" y2="12" />
+        <line x1="3" y1="6" x2="21" y2="6" />
+        <line x1="3" y1="18" x2="21" y2="18" />
+      </svg>
+    </button>
+
     <div class="title-wrap">
       <h1 class="header-title">{title}</h1>
       {#if subtitle}
-        <p class="header-subtitle">{subtitle}</p>
+        <span class="header-subtitle">{subtitle}</span>
       {/if}
     </div>
   </div>
 
   <div class="header-right">
-    <!-- Backend Connection Indicator -->
-    <div class="api-status-badge" title="API Base: {API_BASE_URL}">
+    <div class="api-status-badge" title="API: {API_BASE_URL}">
       <span class="status-pulse" class:connected={isBackendConnected}></span>
-      <span class="status-label">
-        {isBackendConnected ? 'Junto API Live' : 'Offline / Standalone'}
-      </span>
+      <span class="status-label">{isBackendConnected ? 'Connected' : 'Offline'}</span>
     </div>
 
-    <!-- Quick Search Input -->
     <form class="search-form" on:submit|preventDefault={handleSearchSubmit}>
       <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <circle cx="11" cy="11" r="8" />
@@ -51,83 +58,106 @@
       </svg>
       <input
         type="text"
-        placeholder="Search case # or customer..."
+        placeholder="Search case #..."
         bind:value={searchQuery}
         class="search-input"
       />
     </form>
 
-    <!-- Refresh Button -->
-    <button class="btn btn-secondary btn-sm refresh-btn" on:click={handleRefresh} title="Refresh case data">
-      <svg class="icon-refresh" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <button class="btn btn-secondary btn-sm sync-btn" on:click={() => dispatch('refresh')} title="Sync data">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.19" />
       </svg>
-      <span>Sync</span>
+      <span class="sync-text">Sync</span>
     </button>
   </div>
 </header>
 
 <style>
   .top-header {
-    height: 64px;
+    height: 56px;
     background-color: var(--bg-surface);
     border-bottom: 1px solid var(--border-subtle);
-    padding: 0 32px;
+    padding: 0 20px;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 20px;
+    gap: 12px;
     position: sticky;
     top: 0;
-    z-index: 50;
+    z-index: 40;
   }
 
   .header-left {
     display: flex;
     align-items: center;
-    gap: 16px;
+    gap: 12px;
+    min-width: 0;
+  }
+
+  .menu-toggle-btn {
+    display: none;
+    background: transparent;
+    border: none;
+    color: var(--text-main);
+    padding: 6px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+  }
+
+  .menu-toggle-btn:hover {
+    background-color: var(--bg-subtle);
+  }
+
+  .title-wrap {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    overflow: hidden;
+    white-space: nowrap;
   }
 
   .header-title {
-    font-size: 1.15rem;
+    font-size: 1.05rem;
     font-weight: 600;
     color: var(--text-main);
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .header-subtitle {
-    font-size: 0.75rem;
+    font-size: 0.72rem;
     color: var(--text-muted);
   }
 
   .header-right {
     display: flex;
     align-items: center;
-    gap: 14px;
+    gap: 10px;
+    flex-shrink: 0;
   }
 
   .api-status-badge {
-    display: flex;
+    display: inline-flex;
     align-items: center;
-    gap: 6px;
-    padding: 4px 10px;
+    gap: 5px;
+    padding: 3px 8px;
     border-radius: var(--radius-full);
     background-color: var(--bg-subtle);
     border: 1px solid var(--border-subtle);
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     color: var(--text-muted);
-    font-weight: 500;
   }
 
   .status-pulse {
-    width: 7px;
-    height: 7px;
+    width: 6px;
+    height: 6px;
     border-radius: 50%;
     background-color: #f59e0b;
   }
 
   .status-pulse.connected {
     background-color: #10b981;
-    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
   }
 
   .search-form {
@@ -138,63 +168,55 @@
 
   .search-icon {
     position: absolute;
-    left: 10px;
-    width: 15px;
-    height: 15px;
+    left: 8px;
+    width: 14px;
+    height: 14px;
     color: var(--text-muted);
     pointer-events: none;
   }
 
   .search-input {
-    padding: 6px 12px 6px 32px;
-    font-size: 0.8rem;
+    padding: 4px 8px 4px 28px;
+    font-size: 0.78rem;
     font-family: var(--font-sans);
     border: 1px solid var(--border-subtle);
     border-radius: var(--radius-md);
     background-color: var(--bg-subtle);
     color: var(--text-main);
-    width: 220px;
+    width: 150px;
     outline: none;
-    transition: width 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
+    transition: width 0.15s, border-color 0.15s;
   }
 
   .search-input:focus {
-    width: 280px;
+    width: 200px;
     background-color: var(--bg-surface);
     border-color: var(--border-focus);
-    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
   }
 
-  .refresh-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-  }
-
-  .icon-refresh {
-    width: 14px;
-    height: 14px;
+  .sync-btn {
+    padding: 4px 10px;
+    font-size: 0.78rem;
   }
 
   @media (max-width: 768px) {
-    .top-header {
-      padding: 0 16px;
-      height: auto;
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 12px;
-      padding-top: 12px;
-      padding-bottom: 12px;
+    .menu-toggle-btn {
+      display: inline-flex;
     }
-    .header-right {
-      width: 100%;
-      justify-content: space-between;
+    .header-subtitle {
+      display: none;
+    }
+    .api-status-badge {
+      display: none;
     }
     .search-input {
-      width: 160px;
+      width: 110px;
     }
     .search-input:focus {
-      width: 180px;
+      width: 140px;
+    }
+    .sync-text {
+      display: none;
     }
   }
 </style>

@@ -150,6 +150,7 @@
           <select id="filter-status" bind:value={status} on:change={handleFilterChange} class="form-select">
             <option value="ALL">All Statuses</option>
             <option value="OPEN">Open</option>
+            <option value="ASSIGNED">Assigned</option>
             <option value="IN_PROGRESS">In Progress</option>
             <option value="WAITING_FOR_USER">Waiting for User</option>
             <option value="RESOLVED">Resolved</option>
@@ -175,13 +176,15 @@
         <label for="filter-cat" class="filter-label">Category</label>
         <select id="filter-cat" bind:value={category} on:change={handleFilterChange} class="form-select">
           <option value="ALL">All Categories</option>
+          <option value="RIDES">Rides</option>
+          <option value="DAYMATES">DayMates</option>
+          <option value="SERVICES">Services</option>
+          <option value="TICKETS">Movie Tickets</option>
+          <option value="DEALS">LocalDeals</option>
+          <option value="HELPME">HelpMe</option>
           <option value="SAFETY">Safety</option>
           <option value="PAYMENT">Payment</option>
-          <option value="TRIP">Trip</option>
-          <option value="DELIVERY">Delivery</option>
-          <option value="ACCOUNT">Account</option>
-          <option value="TECHNICAL">Technical</option>
-          <option value="GENERAL">General</option>
+          <option value="ACCOUNT">Account & General</option>
         </select>
       </div>
 

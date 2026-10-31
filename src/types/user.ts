@@ -4,12 +4,14 @@ export type AgentStatus = 'ACTIVE' | 'INACTIVE';
 
 export interface SupportAgent {
   id: string;
-  email: string;
+  userId?: string;
   name: string;
-  avatarUrl?: string;
+  email: string;
   role: AgentRole;
-  status: AgentStatus;
-  createdAt: string;
+  isActive: boolean;
+  status?: AgentStatus;
+  avatarUrl?: string;
+  createdAt?: string;
   lastLoginAt?: string;
 }
 

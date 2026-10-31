@@ -53,10 +53,10 @@
         {#if msg.senderType === 'SYSTEM'}
           <div class="system-message">
             <span class="system-line"></span>
-            <span class="system-content">{msg.content} • {formatTime(msg.createdAt)}</span>
+            <span class="system-content">{msg.message || msg.content} • {formatTime(msg.createdAt)}</span>
             <span class="system-line"></span>
           </div>
-        {:else if msg.senderType === 'INTERNAL_NOTE'}
+        {:else if msg.isInternalNote || msg.senderType === 'INTERNAL_NOTE'}
           <div class="message-row internal-note-row">
             <div class="note-box">
               <div class="note-header">
@@ -67,25 +67,25 @@
                   </svg>
                   Internal Note (Agents Only)
                 </span>
-                <span class="author-name">{msg.senderName} ({msg.senderRole || 'Agent'})</span>
+                <span class="author-name">{msg.sender?.name || msg.senderName || 'Support Agent'}</span>
                 <span class="message-time">{formatTime(msg.createdAt)}</span>
               </div>
               <div class="note-body">
-                {msg.content}
+                {msg.message || msg.content}
               </div>
             </div>
           </div>
         {:else}
-          <!-- CUSTOMER or AGENT Message -->
+          <!-- USER / CUSTOMER or AGENT Message -->
           <div
             class="message-row"
-            class:customer-row={msg.senderType === 'CUSTOMER'}
+            class:customer-row={msg.senderType === 'CUSTOMER' || msg.senderType === 'USER'}
             class:agent-row={msg.senderType === 'AGENT'}
           >
             <div class="message-bubble">
               <div class="bubble-header">
                 <span class="author-name">
-                  {msg.senderName}
+                  {msg.sender?.name || msg.senderName || (msg.senderType === 'AGENT' ? 'Support Agent' : 'Customer')}
                   {#if msg.senderType === 'AGENT'}
                     <span class="agent-tag">Support Agent</span>
                   {/if}
@@ -93,7 +93,7 @@
                 <span class="message-time">{formatTime(msg.createdAt)}</span>
               </div>
               <div class="bubble-content">
-                {msg.content}
+                {msg.message || msg.content}
               </div>
             </div>
           </div>

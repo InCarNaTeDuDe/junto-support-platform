@@ -14,6 +14,7 @@
   let showAddModal = false;
   let newName = '';
   let newEmail = '';
+  let newUserId = '';
   let newRole: AgentRole = 'SUPPORT';
 
   $: currentUser = $authStore.user;
@@ -45,6 +46,7 @@
 
     try {
       const created = await supportService.createAgent({
+        userId: newUserId.trim() || undefined,
         name: newName.trim(),
         email: newEmail.trim().toLowerCase(),
         role: newRole,
@@ -54,6 +56,7 @@
       showAddModal = false;
       newName = '';
       newEmail = '';
+      newUserId = '';
       newRole = 'SUPPORT';
       await loadAgents();
     } catch (err: any) {
@@ -290,6 +293,18 @@
                 required
               />
               <span class="form-hint">Must match their Google Sign-In identity to be authorized.</span>
+            </div>
+
+            <div class="form-group">
+              <label for="agent-new-userid" class="form-label">Junto User ID (Optional UUID)</label>
+              <input
+                id="agent-new-userid"
+                type="text"
+                class="form-control font-mono"
+                placeholder="e.g. user-uuid-5001"
+                bind:value={newUserId}
+              />
+              <span class="form-hint">Optional UUID if user already exists in PostgreSQL users table.</span>
             </div>
 
             <div class="form-group">

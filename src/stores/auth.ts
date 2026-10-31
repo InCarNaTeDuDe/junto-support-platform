@@ -1,6 +1,6 @@
-import { writable } from 'svelte/store';
-import { authService } from '../services/auth';
-import type { SupportAgent, AgentRole } from '../types/user';
+import { writable } from "svelte/store";
+import { authService } from "../services/auth";
+import type { SupportAgent, AgentRole } from "../types/user";
 
 export interface AuthState {
   user: SupportAgent | null;
@@ -45,15 +45,15 @@ function createAuthStore() {
           isAuthorized: false,
           role: null,
           isLoading: false,
-          error: err.message || 'Failed to authenticate',
+          error: err.message || "Failed to authenticate",
         });
       }
     },
 
-    async loginWithGoogle(email: string, name?: string, credential?: string) {
+    async loginWithGoogleIdToken(idToken: string) {
       update((s) => ({ ...s, isLoading: true, error: null }));
       try {
-        const session = await authService.loginWithGoogle({ email, name, credential });
+        const session = await authService.loginWithGoogleIdToken(idToken);
         set({
           user: session.user,
           isAuthenticated: session.isAuthenticated,
@@ -66,14 +66,53 @@ function createAuthStore() {
       } catch (err: any) {
         const isUnauthorized = err.status === 403;
         set({
-          user: isUnauthorized ? { id: 'unauth', email, name: name || 'User', role: 'SUPPORT', status: 'INACTIVE', createdAt: '' } : null,
+          user: isUnauthorized
+            ? err.data?.data || err.data?.user || null
+            : null,
           isAuthenticated: isUnauthorized,
           isAuthorized: false,
           role: null,
           isLoading: false,
-          error: err.message || 'Authentication failed',
+          error: err.message || "Google authentication failed",
         });
-        return { success: false, authorized: false, error: err.message };
+        return {
+          success: false,
+          authorized: false,
+          error: err.message,
+          status: err.status,
+        };
+      }
+    },
+
+    async loginWithExistingToken(token: string) {
+      update((s) => ({ ...s, isLoading: true, error: null }));
+      try {
+        const session = await authService.loginWithExistingToken(token);
+        set({
+          user: session.user,
+          isAuthenticated: session.isAuthenticated,
+          isAuthorized: session.isAuthorized,
+          role: session.role,
+          isLoading: false,
+          error: null,
+        });
+        return { success: true, authorized: session.isAuthorized };
+      } catch (err: any) {
+        const isUnauthorized = err.status === 403;
+        set({
+          user: null,
+          isAuthenticated: isUnauthorized,
+          isAuthorized: false,
+          role: null,
+          isLoading: false,
+          error: err.message || "Authentication with token failed",
+        });
+        return {
+          success: false,
+          authorized: false,
+          error: err.message,
+          status: err.status,
+        };
       }
     },
 

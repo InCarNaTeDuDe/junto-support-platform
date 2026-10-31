@@ -5,18 +5,22 @@
 
   $: label = {
     OPEN: 'Open',
+    ASSIGNED: 'Assigned',
     IN_PROGRESS: 'In Progress',
     WAITING_FOR_USER: 'Waiting for User',
     RESOLVED: 'Resolved',
     CLOSED: 'Closed',
+    'Under Review': 'Under Review',
   }[status] || status;
 
   $: badgeClass = {
     OPEN: 'badge-open',
+    ASSIGNED: 'badge-assigned',
     IN_PROGRESS: 'badge-inprogress',
     WAITING_FOR_USER: 'badge-waiting',
     RESOLVED: 'badge-resolved',
     CLOSED: 'badge-closed',
+    'Under Review': 'badge-open',
   }[status] || 'badge-open';
 </script>
 

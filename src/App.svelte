@@ -16,6 +16,7 @@
   let unassignedCount = 0;
   let criticalCount = 0;
   let isBackendConnected = true;
+  let isMobileSidebarOpen = false;
 
   // Global search query passed from header
   let headerSearchQuery = '';
@@ -103,7 +104,9 @@
       activePage={currentPage}
       {unassignedCount}
       {criticalCount}
+      isOpenMobile={isMobileSidebarOpen}
       on:navigate={(e) => handleNavigate(e.detail)}
+      on:closeMobile={() => (isMobileSidebarOpen = false)}
       on:logout={handleLogout}
     />
 
@@ -112,6 +115,7 @@
         title={pageHeaderTitle}
         subtitle="Junto Mobile Support System"
         {isBackendConnected}
+        on:toggleSidebar={() => (isMobileSidebarOpen = !isMobileSidebarOpen)}
         on:quickSearch={handleQuickSearch}
         on:refresh={handleHeaderRefresh}
       />

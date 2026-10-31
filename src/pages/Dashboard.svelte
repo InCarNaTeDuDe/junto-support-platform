@@ -32,17 +32,17 @@
     isLoading = true;
     errorMsg = '';
     try {
-      const [sumData, critData, unassignData, recentData] = await Promise.all([
+      const [sumData, critData, unassignData, recentList] = await Promise.all([
         supportService.getSummary(),
         supportService.getCases({ priority: 'CRITICAL', limit: 5 }),
         supportService.getCases({ view: 'UNASSIGNED', limit: 5 }),
-        supportService.getCases({ limit: 5 }),
+        supportService.getRecentCases(5),
       ]);
 
       summary = sumData;
       criticalCases = critData.cases;
       unassignedCases = unassignData.cases;
-      recentCases = recentData.cases;
+      recentCases = recentList;
     } catch (err: any) {
       errorMsg = err.message || 'Failed to fetch dashboard data from Junto backend';
     } finally {

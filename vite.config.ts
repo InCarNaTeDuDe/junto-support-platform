@@ -1,4 +1,4 @@
-import react from "@vitejs/plugin-react";
+import { svelte } from "@sveltejs/vite-plugin-svelte";
 import { fileURLToPath, URL } from "node:url";
 import { defineConfig, type Plugin } from "vite";
 import fs from "node:fs";
@@ -33,7 +33,7 @@ function staticSpaPlugin(): Plugin {
 }
 
 export default defineConfig(() => ({
-  plugins: [react(), staticSpaPlugin()],
+  plugins: [svelte(), staticSpaPlugin()],
   resolve: {
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url)),

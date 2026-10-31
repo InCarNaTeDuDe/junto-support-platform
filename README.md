@@ -1,6 +1,6 @@
-# Junto Support Management Dashboard (React)
+# Junto Support Management Dashboard (Svelte 5)
 
-A lightweight, modern Support Management web application for Junto rewritten in **React 19**, **TypeScript**, **Vite**, and pure **CSS** stylesheet.
+A blazing-fast, lightweight, modern Support Management web application for Junto built with **Svelte 5**, **TypeScript**, **Vite**, and pure **CSS** stylesheet.
 
 This internal dashboard is designed for Junto's **OWNER** and **SUPPORT** agents to manage customer support cases created through the Junto mobile application's Support Chat.
 
@@ -53,5 +53,5 @@ VITE_JUNTO_API_BASE_URL=
 ## 3. Scripts
 
 - `npm run dev`: Starts the Vite development server on port 3000.
-- `npm run build`: Compiles the React TypeScript application for production.
+- `npm run build`: Compiles the Svelte 5 TypeScript application for production.
 - `npm run lint`: Validates TypeScript types across all files.
